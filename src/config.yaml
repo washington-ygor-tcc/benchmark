@@ -1,0 +1,8 @@
+nats:
+  url: "0.0.0.0:4222"
+  request_channel: "prediction_request_channel"
+  response_channel: "prediction_response_channel"
+
+api:
+  base_url: "http://localhost:8000"
+  prediction: "/predict"
