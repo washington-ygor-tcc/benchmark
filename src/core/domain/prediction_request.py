@@ -1,16 +1,16 @@
 import dataclasses
 import time
-from datetime import datetime
-from typing import Any, Dict
-from uuid import UUID
+
+from src.core.types import Features, Id
+from typing import Dict, Any
 
 
 @dataclasses.dataclass
 class PredictionRequest:
-    id: UUID
-    features: Dict[str, Any]
+    id: Id
+    features: Features
     start: time.time
     end: time.time
 
-    def todict(self):
+    def todict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)
