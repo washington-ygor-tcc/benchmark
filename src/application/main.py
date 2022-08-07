@@ -4,11 +4,15 @@ import numpy as np
 
 from src.core.adapters.client_api_adapter import ClientApiRestRequestsAdapter
 from src.core.adapters.metric_repository_adapter import MetricRepository
-from src.core.adapters.nats_adapter import NatsConnection, PublisherAdatper, SubscriberAdapter
+from src.core.adapters.nats_request_prediction_adapter import (
+    NatsConnection,
+    PublisherAdatper,
+    SubscriberAdapter,
+    MessagingAdapter,
+)
 from src.core.adapters.uuid_provider_adapter import UUIDProviderAdapter
 from src.core.domain.prediction_request import PredictionRequest
-from src.core.use_cases.benchmark_api import BenchmarkAPI
-from src.core.use_cases.benchmark_messaging import BenchmarkMessaging
+from src.core.use_cases.benchmark import Benchmark
 from yaml import load, loader
 
 
@@ -22,22 +26,33 @@ async def main():
         config = load(file, Loader=loader.SafeLoader)
         nats_connection_1 = NatsConnection(config["nats"]["url"])
         nats_connection_2 = NatsConnection(config["nats"]["url"])
-        pulisher = PublisherAdatper(nats_connection_1, config["nats"]["request_channel"])
-        subscriber = SubscriberAdapter(nats_connection_2, config["nats"]["response_channel"])
+        publisher = PublisherAdatper(
+            nats_connection_1, config["nats"]["request_channel"]
+        )
+        subscriber = SubscriberAdapter(
+            nats_connection_2, config["nats"]["response_channel"]
+        )
 
         metric_repository = MetricRepository()
         id_provider = UUIDProviderAdapter()
+        messaging_adapter = MessagingAdapter(publisher, subscriber)
 
-        benchmark_messaging = BenchmarkMessaging(pulisher, subscriber, metric_repository, id_provider)
-        benchmark_messaging.set_requests([{} for _ in range(10)])
-        await benchmark_messaging.run()
-        print(calculate_avarage(benchmark_messaging.requests()))
+        async with messaging_adapter.start_subscription():
+            benchmark = Benchmark(
+                messaging_adapter, metric_repository, id_provider
+            )
+            benchmark.set_requests([{} for _ in range(10)])
+            await benchmark.run()
+            print(benchmark.requests)
+            print(calculate_avarage(benchmark.requests))
 
-        client_api = ClientApiRestRequestsAdapter(config["api"]["base_url"] + config["api"]["prediction"])
-        benchmark_api = BenchmarkAPI(client_api, metric_repository, id_provider)
+        client_api = ClientApiRestRequestsAdapter(
+            config["api"]["base_url"] + config["api"]["prediction"]
+        )
+        benchmark_api = Benchmark(client_api, metric_repository, id_provider)
         benchmark_api.set_requests([{} for _ in range(10)])
-        benchmark_api.run()
-        print(calculate_avarage(benchmark_api.requests()))
+        await benchmark_api.run()
+        print(calculate_avarage(benchmark_api.requests))
 
 
 if __name__ == "__main__":
