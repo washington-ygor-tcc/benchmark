@@ -4,8 +4,8 @@ import nats
 
 from contextlib import asynccontextmanager
 from nats.aio.client import Client
-from src.core.domain.prediction_request import PredictionRequest
-from src.core.adapters.utils import json_default_serializer
+from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.adapters.utils import json_default_serializer
 from typing import Any, AsyncContextManager, Callable, Dict
 
 

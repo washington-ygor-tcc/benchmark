@@ -10,9 +10,13 @@ nats-py = "^2.1.4"
 PyYAML = "^6.0"
 black = "^22.6.0"
 numpy = "^1.23.1"
+click = "^8.1.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+
+[tool.poetry.scripts]
+benchmark = "benchmark.application.cli:cli"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

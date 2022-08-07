@@ -1,7 +1,7 @@
 import dataclasses
 import time
 
-from src.core.types import Features, Id
+from benchmark.core.types import Features, Id
 from typing import Dict, Any
 
 

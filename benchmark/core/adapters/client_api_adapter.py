@@ -4,9 +4,9 @@ import json
 
 
 from typing import Any, Dict
-from src.core.adapters.utils import json_default_serializer
-from src.core.domain.prediction_request import PredictionRequest
-from src.core.ports.request_prediction_port import RequestPredictionPort
+from benchmark.core.adapters.utils import json_default_serializer
+from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.ports.request_prediction_port import RequestPredictionPort
 
 
 class ClientApiRestRequestsAdapter(RequestPredictionPort):

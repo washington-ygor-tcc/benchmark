@@ -4,11 +4,11 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 from .utils import id_provider
 
-from src.core.use_cases.benchmark import Benchmark
-from src.core.ports.request_prediction_port import RequestPredictionPort
-from src.core.ports.metric_repository_port import MetricRepositoryPort
-from src.core.ports.id_provider_port import IdProviderPort
-from src.core.ports.time_provider_port import TimeProviderPort
+from benchmark.core.use_cases.benchmark import Benchmark
+from benchmark.core.ports.request_prediction_port import RequestPredictionPort
+from benchmark.core.ports.metric_repository_port import MetricRepositoryPort
+from benchmark.core.ports.id_provider_port import IdProviderPort
+from benchmark.core.ports.time_provider_port import TimeProviderPort
 
 
 class TestBenchmarkAPI(unittest.IsolatedAsyncioTestCase):

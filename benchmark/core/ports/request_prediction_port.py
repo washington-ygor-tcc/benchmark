@@ -1,7 +1,7 @@
 import abc
 from typing import Dict, Any
 
-from src.core.domain.prediction_request import PredictionRequest
+from benchmark.core.domain.prediction_request import PredictionRequest
 
 
 class RequestPredictionPort(abc.ABC):

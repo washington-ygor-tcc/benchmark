@@ -1,18 +1,21 @@
 import asyncio
+import enum
 
 import numpy as np
 
-from src.core.adapters.client_api_adapter import ClientApiRestRequestsAdapter
-from src.core.adapters.metric_repository_adapter import MetricRepository
-from src.core.adapters.nats_request_prediction_adapter import (
+from benchmark.core.adapters.client_api_adapter import (
+    ClientApiRestRequestsAdapter,
+)
+from benchmark.core.adapters.metric_repository_adapter import MetricRepository
+from benchmark.core.adapters.nats_request_prediction_adapter import (
     NatsConnection,
     PublisherAdatper,
     SubscriberAdapter,
     MessagingAdapter,
 )
-from src.core.adapters.uuid_provider_adapter import UUIDProviderAdapter
-from src.core.domain.prediction_request import PredictionRequest
-from src.core.use_cases.benchmark import Benchmark
+from benchmark.core.adapters.uuid_provider_adapter import UUIDProviderAdapter
+from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.use_cases.benchmark import Benchmark
 from yaml import load, loader
 
 
@@ -43,7 +46,6 @@ async def main():
             )
             benchmark.set_requests([{} for _ in range(10)])
             await benchmark.run()
-            print(benchmark.requests)
             print(calculate_avarage(benchmark.requests))
 
         client_api = ClientApiRestRequestsAdapter(
