@@ -11,10 +11,14 @@ from benchmark.application import app
     default=app.BenchmarkTypes.API,
     help="specify the target comunication for the benchmark",
 )
-@click.option("--n", type=int, required=True)
-def cli(type, n):
+@click.option(
+    "--n",
+    type=int,
+    required=True,
+    help="specify the number of request predictions the benchmark will make",
+)
+def run(type, n):
     benchmark = app.create_benchmark(type, n)
-
     benchmark = asyncio.run(benchmark)
 
     print(app.calculate_avarage(benchmark))

@@ -14,7 +14,6 @@ from benchmark.core.adapters.nats_request_prediction_adapter import (
     MessagingAdapter,
 )
 from benchmark.core.adapters.uuid_provider_adapter import UUIDProviderAdapter
-from benchmark.core.domain.prediction_request import PredictionRequest
 from benchmark.core.use_cases.benchmark import Benchmark
 from yaml import load, loader
 
@@ -31,7 +30,7 @@ async def create_benchmark(
     with open("./benchmark/config.yaml", encoding="utf8") as file:
         config = load(file, Loader=loader.SafeLoader)
 
-        if benchmark_type == BenchmarkTypes.API:
+        if benchmark_type == BenchmarkTypes.MESSAGING:
             nats_connection_1 = NatsConnection(config["nats"]["url"])
             nats_connection_2 = NatsConnection(config["nats"]["url"])
             publisher = PublisherAdatper(
@@ -49,16 +48,15 @@ async def create_benchmark(
                 messaging_adapter, metric_repository, id_provider
             )
 
-            async with messaging_adapter.start_subscription():
-                benchmark = Benchmark(
-                    messaging_adapter, metric_repository, id_provider
-                )
-                benchmark.set_requests([{} for _ in range(total_requests)])
-                await benchmark.run()
+            benchmark = Benchmark(
+                messaging_adapter, metric_repository, id_provider
+            )
+            benchmark.set_requests([{} for _ in range(total_requests)])
+            await benchmark.run()
 
             return benchmark
 
-        if benchmark_type == BenchmarkTypes.MESSAGING:
+        if benchmark_type == BenchmarkTypes.API:
             client_api = ClientApiRestRequestsAdapter(
                 config["api"]["base_url"] + config["api"]["prediction"]
             )

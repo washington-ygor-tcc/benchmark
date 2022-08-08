@@ -8,6 +8,8 @@ from benchmark.core.domain.prediction_request import PredictionRequest
 from benchmark.core.adapters.utils import json_default_serializer
 from typing import Any, AsyncContextManager, Callable, Dict
 
+from benchmark.core.ports.request_prediction_port import RequestPredictionPort
+
 
 __all__ = [
     "NatsConnection",
@@ -61,61 +63,71 @@ class SubscriberAdapter:
 
     async def stop(self) -> None:
         if self.__subscription is not None:
-            await self.__subscription.drain()
+            await self.__subscription.unsubscribe()
 
     async def start(self, handle_callback: Callable[[Dict[str, Any]], None]):
         connection: Client
+
+        async def callback(msg):
+            await handle_callback(self.__to_json(msg))
+
         async with self.__nats.connect() as connection:
+
             self.__subscription = await connection.subscribe(self.__channel)
-            try:
-                async for msg in self.__subscription.messages:
-                    handle_callback(self.__to_json(msg))
-            except Exception as e:
-                print("aaaa", e)
+            async for msg in self.__subscription.messages:
+                await callback(msg)
 
 
-class MessagingAdapter:
+class MessagingAdapter(RequestPredictionPort):
     def __init__(
         self, publisher: PublisherAdatper, subscriber: SubscriberAdapter
     ) -> None:
         self.__publisher = publisher
         self.__subscriber = subscriber
         self.__subscription_task = None
-        self.__queue = asyncio.Queue()
-
-    def __handle(self, data: Dict[str, Any]):
-        if data.get("id") is not None:
-            self.__queue.put_nowait(data)
-
-    @asynccontextmanager
-    async def start_subscription(self):
-        try:
-            self.__subscription_task = asyncio.create_task(
-                self.__subscriber.start(self.__handle)
-            )
-            yield
-        finally:
-            await self.stop_subscription()
-
-    async def stop_subscription(self):
-        if self.__subscription_task is not None:
-            await self.__subscriber.stop()
-            self.__subscription_task.cancel()
-
-    async def __publish(self, prediction: PredictionRequest):
-        await self.__publisher.publish(prediction)
-
-        async def wait_for_response():
-            while (response := await self.__queue.get()) and response.get(
-                "id"
-            ) != prediction.id:
-                self.__queue.put_nowait(response)
-
-            return response
-
-        return await asyncio.create_task(wait_for_response())
+        self.__responses = {}
 
     async def get_prediction(
         self, prediction: PredictionRequest
     ) -> PredictionRequest:
-        return await self.__publish(prediction)
+        async with self.__subscription_ctx():
+            prediction = await self.__publish(prediction)
+
+        return prediction
+
+    async def __handle(self, data: Dict[str, Any]):
+        if (request_id := data.get("id")) is not None:
+            self.__responses[request_id].set_result(data)
+
+    @asynccontextmanager
+    async def __subscription_ctx(self):
+        try:
+            await self.__start_subscription()
+            yield
+        finally:
+            await self.__stop_subscription()
+
+    async def __start_subscription(self):
+        self.__subscription_task = asyncio.create_task(
+            self.__subscriber.start(self.__handle)
+        )
+
+    async def __stop_subscription(self):
+        if self.__subscription_task is not None:
+            await self.__subscriber.stop()
+            self.__subscription_task.cancel()
+
+    async def __wait_for_response(self, request_id: int):
+        def remove_response_on_done(future: asyncio.Future):
+            self.__responses.pop(request_id, None)
+
+        future_response = asyncio.get_running_loop().create_future()
+        future_response.add_done_callback(remove_response_on_done)
+
+        self.__responses[request_id] = future_response
+
+        return await future_response
+
+    async def __publish(self, prediction: PredictionRequest):
+        await self.__publisher.publish(prediction)
+        return await self.__wait_for_response(prediction.id)
