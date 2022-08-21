@@ -1,8 +1,8 @@
 import time
 
-from benchmark.core.ports.time_provider_port import TimerProviderPort
+from benchmark.core.ports.time_provider_port import TimeProviderPort
 
 
-class TimeProviderAdapter(TimerProviderPort):
+class TimeProviderAdapter(TimeProviderPort):
     def time(self, *args, **kwargs) -> float:
         return time.monotonic()

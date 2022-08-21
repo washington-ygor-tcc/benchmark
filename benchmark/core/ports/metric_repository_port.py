@@ -2,4 +2,5 @@ import abc
 
 
 class MetricRepositoryPort(abc.ABC):
-    pass
+    def save(self, *args, **kwargs):
+        pass

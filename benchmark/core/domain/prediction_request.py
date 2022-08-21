@@ -9,8 +9,8 @@ from typing import Dict, Any
 class PredictionRequest:
     id: Id
     features: Features
-    start: time.time
-    end: time.time
+    start: time.time = None
+    end: time.time = None
 
     def todict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)

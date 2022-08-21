@@ -1,12 +1,14 @@
 import asyncio
 import enum
-
 import numpy as np
+import yaml
 
 from benchmark.core.adapters.client_api_adapter import (
     ClientApiRestRequestsAdapter,
 )
-from benchmark.core.adapters.metric_repository_adapter import MetricRepository
+from benchmark.core.adapters.metric_repository_adapter import (
+    MetricRepositoryAdapter,
+)
 from benchmark.core.adapters.nats_request_prediction_adapter import (
     NatsConnection,
     PublisherAdatper,
@@ -14,8 +16,13 @@ from benchmark.core.adapters.nats_request_prediction_adapter import (
     MessagingAdapter,
 )
 from benchmark.core.adapters.uuid_provider_adapter import UUIDProviderAdapter
+from benchmark.core.adapters.time_provider_adapter import TimeProviderAdapter
 from benchmark.core.use_cases.benchmark import Benchmark
-from yaml import load, loader
+from benchmark.core.use_cases import repository
+from benchmark.core.types import (
+    ProgressIndicator,
+    RequestGenerator,
+)
 
 
 @enum.unique
@@ -24,53 +31,57 @@ class BenchmarkTypes(str, enum.Enum):
     MESSAGING = "messaging"
 
 
-async def create_benchmark(
-    benchmark_type: BenchmarkTypes, total_requests: int
-) -> Benchmark:
+def get_config():
     with open("./benchmark/config.yaml", encoding="utf8") as file:
-        config = load(file, Loader=loader.SafeLoader)
-
-        if benchmark_type == BenchmarkTypes.MESSAGING:
-            nats_connection_1 = NatsConnection(config["nats"]["url"])
-            nats_connection_2 = NatsConnection(config["nats"]["url"])
-            publisher = PublisherAdatper(
-                nats_connection_1, config["nats"]["request_channel"]
-            )
-            subscriber = SubscriberAdapter(
-                nats_connection_2, config["nats"]["response_channel"]
-            )
-
-            metric_repository = MetricRepository()
-            id_provider = UUIDProviderAdapter()
-            messaging_adapter = MessagingAdapter(publisher, subscriber)
-
-            benchmark = Benchmark(
-                messaging_adapter, metric_repository, id_provider
-            )
-
-            benchmark = Benchmark(
-                messaging_adapter, metric_repository, id_provider
-            )
-            benchmark.set_requests([{} for _ in range(total_requests)])
-            await benchmark.run()
-
-            return benchmark
-
-        if benchmark_type == BenchmarkTypes.API:
-            client_api = ClientApiRestRequestsAdapter(
-                config["api"]["base_url"] + config["api"]["prediction"]
-            )
-            metric_repository = MetricRepository()
-            id_provider = UUIDProviderAdapter()
-
-            benchmark = Benchmark(client_api, metric_repository, id_provider)
-            benchmark.set_requests([{} for _ in range(total_requests)])
-            await benchmark.run()
-
-            return benchmark
+        config = yaml.safe_load(file)
+        return config
 
 
-def calculate_avarage(benchmark: Benchmark):
+def create_benchmark(benchmark_type: BenchmarkTypes) -> Benchmark:
+    config = get_config()
+
+    if benchmark_type == BenchmarkTypes.MESSAGING:
+        id_provider = UUIDProviderAdapter()
+        time_provider = TimeProviderAdapter()
+        messaging_adapter = MessagingAdapter(
+            PublisherAdatper(
+                NatsConnection(config["nats"]["url"]),
+                config["nats"]["request_channel"],
+            ),
+            SubscriberAdapter(
+                NatsConnection(config["nats"]["url"]),
+                config["nats"]["response_channel"],
+            ),
+        )
+
+        return Benchmark(messaging_adapter, time_provider, id_provider)
+
+    if benchmark_type == BenchmarkTypes.API:
+        client_api = ClientApiRestRequestsAdapter(
+            config["api"]["base_url"] + config["api"]["prediction"]
+        )
+        id_provider = UUIDProviderAdapter()
+        time_provider = TimeProviderAdapter()
+
+        return Benchmark(client_api, time_provider, id_provider)
+
+
+def run_benchmark(
+    benchmark: Benchmark,
+    request_generator: RequestGenerator,
+    progress_indicator: ProgressIndicator = None,
+) -> None:
+    benchmark.set_requests(request_generator)
+    asyncio.run(benchmark.run(progress_indicator))
+
+
+def save_benchmark(benchmark: Benchmark):
+    repository.save(
+        MetricRepositoryAdapter, UUIDProviderAdapter(), benchmark.requests
+    )
+
+
+def calculate_avarage(benchmark: Benchmark) -> object:
     data = np.array(
         [request.end - request.start for request in benchmark.requests]
     )
