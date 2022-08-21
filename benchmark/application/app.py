@@ -9,14 +9,15 @@ from benchmark.core.adapters.client_api_adapter import (
 from benchmark.core.adapters.metric_repository_adapter import (
     MetricRepositoryAdapter,
 )
-from benchmark.core.adapters.nats_request_prediction_adapter import (
+from benchmark.core.adapters import (
     NatsConnection,
     PublisherAdatper,
     SubscriberAdapter,
     MessagingAdapter,
+    UUIDProviderAdapter,
+    TimeProviderAdapter,
 )
-from benchmark.core.adapters.uuid_provider_adapter import UUIDProviderAdapter
-from benchmark.core.adapters.time_provider_adapter import TimeProviderAdapter
+
 from benchmark.core.use_cases.benchmark import Benchmark
 from benchmark.core.use_cases import repository
 from benchmark.core.types import (
