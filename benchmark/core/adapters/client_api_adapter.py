@@ -26,4 +26,4 @@ class ClientApiRestRequestsAdapter(RequestPredictionPort):
     async def get_prediction(
         self, request: PredictionRequest
     ) -> Dict[int, Any]:
-        return asyncio.coroutine(self.__get_prediction(request))
+        return await asyncio.coroutine(self.__get_prediction)(request)

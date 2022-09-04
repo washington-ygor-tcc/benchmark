@@ -1,7 +1,7 @@
 import dataclasses
 import time
 
-from benchmark.core.types import Features, Id
+from benchmark.core.types import Features, Id, Prediction
 from typing import Dict, Any
 
 
@@ -11,6 +11,7 @@ class PredictionRequest:
     features: Features
     start: time.time = None
     end: time.time = None
+    prediction: Prediction = None
 
     def todict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)

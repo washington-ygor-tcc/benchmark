@@ -1,5 +1,6 @@
 import asyncio
 import enum
+from typing import Dict
 import numpy as np
 import yaml
 
@@ -18,7 +19,7 @@ from benchmark.core.adapters import (
     TimeProviderAdapter,
 )
 
-from benchmark.core.use_cases.benchmark import Benchmark
+from benchmark.core.use_cases import benchmark
 from benchmark.core.use_cases import repository
 from benchmark.core.types import (
     ProgressIndicator,
@@ -38,52 +39,60 @@ def get_config():
         return config
 
 
-def create_benchmark(benchmark_type: BenchmarkTypes) -> Benchmark:
-    config = get_config()
+async def _run_messaging_benchmark(
+    config: Dict,
+    request_generator: RequestGenerator,
+):
+    id_provider = UUIDProviderAdapter()
+    time_provider = TimeProviderAdapter()
+    messaging_adapter = MessagingAdapter(
+        PublisherAdatper(
+            NatsConnection(config["nats"]["url"]),
+            config["nats"]["request_channel"],
+        ),
+        SubscriberAdapter(
+            NatsConnection(config["nats"]["url"]),
+            config["nats"]["response_channel"],
+        ),
+    )
 
-    if benchmark_type == BenchmarkTypes.MESSAGING:
-        id_provider = UUIDProviderAdapter()
-        time_provider = TimeProviderAdapter()
-        messaging_adapter = MessagingAdapter(
-            PublisherAdatper(
-                NatsConnection(config["nats"]["url"]),
-                config["nats"]["request_channel"],
-            ),
-            SubscriberAdapter(
-                NatsConnection(config["nats"]["url"]),
-                config["nats"]["response_channel"],
-            ),
-        )
+    return await asyncio.gather(
+        *[
+            benchmark.run(
+                features, messaging_adapter, time_provider, id_provider
+            )
+            for features in request_generator
+        ]
+    )
 
-        return Benchmark(messaging_adapter, time_provider, id_provider)
 
-    if benchmark_type == BenchmarkTypes.API:
-        client_api = ClientApiRestRequestsAdapter(
-            config["api"]["base_url"] + config["api"]["prediction"]
-        )
-        id_provider = UUIDProviderAdapter()
-        time_provider = TimeProviderAdapter()
+async def _run_api_benchmark(
+    config: Dict,
+    request_generator: RequestGenerator,
+):
+    client_api = ClientApiRestRequestsAdapter(
+        config["api"]["base_url"] + config["api"]["prediction"]
+    )
+    id_provider = UUIDProviderAdapter()
+    time_provider = TimeProviderAdapter()
 
-        return Benchmark(client_api, time_provider, id_provider)
+    return await asyncio.gather(
+        *[
+            benchmark.run(features, client_api, time_provider, id_provider)
+            for features in request_generator
+        ]
+    )
 
 
 def run_benchmark(
-    benchmark: Benchmark,
+    benchmark_type: BenchmarkTypes,
     request_generator: RequestGenerator,
-    progress_indicator: ProgressIndicator = None,
 ) -> None:
-    benchmark.set_requests(request_generator)
-    asyncio.run(benchmark.run(progress_indicator))
-
-
-def save_benchmark(benchmark: Benchmark):
-    repository.save(
-        MetricRepositoryAdapter, UUIDProviderAdapter(), benchmark.requests
-    )
-
-
-def calculate_avarage(benchmark: Benchmark) -> object:
-    data = np.array(
-        [request.end - request.start for request in benchmark.requests]
-    )
-    return f"média {data.mean()} {data.max()} {data.min()}"
+    if benchmark_type == BenchmarkTypes.MESSAGING:
+        return asyncio.get_event_loop().run_until_complete(
+            _run_messaging_benchmark(get_config(), request_generator)
+        )
+    if benchmark_type == BenchmarkTypes.API:
+        return asyncio.get_event_loop().run_until_complete(
+            _run_api_benchmark(get_config(), request_generator)
+        )
