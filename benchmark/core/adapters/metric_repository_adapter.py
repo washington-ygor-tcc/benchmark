@@ -14,5 +14,10 @@ class MetricRepositoryAdapter(MetricRepositoryPort):
             writer.writerow(["benchmark_id", "request_id", "start", "end"])
             for request in benchmark_results:
                 writer.writerow(
-                    [benchmark_id, request.id, request.start, request.end]
+                    [
+                        benchmark_id,
+                        request.request_id,
+                        request.start,
+                        request.end,
+                    ]
                 )

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from time import time
 from typing import Dict
 
@@ -55,7 +56,7 @@ class Benchmark:
             self.__set_request(request)
 
     def __set_request(self, request: PredictionRequest) -> None:
-        self.__requests.update({request.id: request})
+        self.__requests.update({request.request_id: request})
 
     def __get_time(self) -> float:
         if self.__timer_provider is None:

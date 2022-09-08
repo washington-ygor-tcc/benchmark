@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 @dataclasses.dataclass
 class PredictionRequest:
-    id: Id
+    request_id: Id
     features: Features
     start: time.time = None
     end: time.time = None

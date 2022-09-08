@@ -30,7 +30,7 @@ class NatsConnection:
             nats_connection = await nats.connect(self.__nats_server_url)
             yield nats_connection
         except Exception as e:
-            print(e)
+            pass
         finally:
             if nats_connection:
                 await nats_connection.drain()
@@ -88,15 +88,14 @@ class MessagingAdapter(RequestPredictionPort):
         self.__responses = {}
 
     async def get_prediction(
-        self, prediction: PredictionRequest
+        self, request: PredictionRequest
     ) -> PredictionRequest:
         async with self.__subscription_ctx():
-            prediction = await self.__publish(prediction)
-
-        return prediction
+            response = await self.__publish(request)
+        return response
 
     async def __handle(self, data: Dict[str, Any]):
-        if (request_id := data.get("id")) is not None:
+        if (request_id := data.get("request_id")) is not None:
             self.__responses[request_id].set_result(data)
 
     @asynccontextmanager
@@ -108,7 +107,7 @@ class MessagingAdapter(RequestPredictionPort):
             await self.__stop_subscription()
 
     async def __start_subscription(self):
-        self.__subscription_task = asyncio.create_task(
+        self.__subscription_task = asyncio.get_event_loop().create_task(
             self.__subscriber.start(self.__handle)
         )
 
@@ -117,17 +116,13 @@ class MessagingAdapter(RequestPredictionPort):
             await self.__subscriber.stop()
             self.__subscription_task.cancel()
 
-    async def __wait_for_response(self, request_id: int):
+    async def __publish(self, request: PredictionRequest):
         def remove_response_on_done(future: asyncio.Future):
-            self.__responses.pop(request_id, None)
+            self.__responses.pop(request.request_id, None)
 
-        future_response = asyncio.get_running_loop().create_future()
+        future_response = asyncio.get_event_loop().create_future()
         future_response.add_done_callback(remove_response_on_done)
-
-        self.__responses[request_id] = future_response
+        self.__responses[request.request_id] = future_response
+        await self.__publisher.publish(request)
 
         return await future_response
-
-    async def __publish(self, prediction: PredictionRequest):
-        await self.__publisher.publish(prediction)
-        return await self.__wait_for_response(prediction.id)

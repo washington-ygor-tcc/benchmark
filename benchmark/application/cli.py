@@ -21,7 +21,12 @@ def progress_indicator(progress_bar: tqdm.tqdm, current: int):
     required=True,
     help="specify the number of request predictions the benchmark will make",
 )
-def run(type, n):
+@click.option(
+    "--m",
+    type=int,
+    help="specify the number of request predictions the benchmark will make",
+)
+def run(type, n, m):
     benchmark = app.create_benchmark(type)
 
     with tqdm.tqdm(total=n, desc="Running benchmark", colour="green") as pbar:
@@ -30,6 +35,6 @@ def run(type, n):
             ({} for _ in range(n)),
             lambda current, _: progress_indicator(pbar, current),
         )
-    app.save_benchmark(benchmark)
+    # app.save_benchmark(benchmark)
 
     print(app.calculate_avarage(benchmark))
