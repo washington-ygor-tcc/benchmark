@@ -1,6 +1,5 @@
 import asyncio
 import json
-import traceback
 import nats
 
 from contextlib import asynccontextmanager
