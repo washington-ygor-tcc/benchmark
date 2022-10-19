@@ -20,9 +20,20 @@ from benchmark.application import app
     required=True,
     help="specify the number of request predictions the benchmark will make",
 )
-def run(benchmark_type, requests_number):
+@click.option(
+    "--csv",
+    type=click.Path(
+        exists=False,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+    ),
+    default=".",
+)
+def run(benchmark_type, requests_number, csv):
     results = app.run_benchmark(
         benchmark_type,
         ({"id": _} for _ in range(requests_number)),
     )
-    app.save_benchmark_csv(benchmark_type, results)
+    app.save_benchmark_csv(benchmark_type, results, dest=csv)
