@@ -27,7 +27,7 @@ def __get_time(time_provider: TimeProviderPort = None):
 
 
 @contextmanager
-def _setup_request(
+def __setup_request(
     features: Features,
     id_provider: IdProviderPort = None,
     time_provider: TimeProviderPort = None,
@@ -47,7 +47,7 @@ async def run(
     timer_provider: TimeProviderPort = None,
     id_provider: IdProviderPort = None,
 ):
-    with _setup_request(features, id_provider, timer_provider) as request:
+    with __setup_request(features, id_provider, timer_provider) as request:
         request.prediction = await request_prediction.get_prediction(request)
         return request
 

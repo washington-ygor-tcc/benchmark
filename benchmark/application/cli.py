@@ -1,6 +1,7 @@
 import click
 
 from benchmark.application import app
+from benchmark.application import helpers
 
 
 @click.command()
@@ -8,8 +9,8 @@ from benchmark.application import app
     "--type",
     "-t",
     "benchmark_type",
-    type=click.Choice(app.BenchmarkTypes),
-    default=app.BenchmarkTypes.API,
+    type=click.Choice(helpers.BenchmarkTypes),
+    default=helpers.BenchmarkTypes.API,
     help="specify the target comunication for the benchmark",
 )
 @click.option(
@@ -29,11 +30,14 @@ from benchmark.application import app
         readable=True,
         resolve_path=True,
     ),
-    default=".",
+    default=None,
 )
 def run(benchmark_type, requests_number, csv):
     results = app.run_benchmark(
         benchmark_type,
         ({"id": _} for _ in range(requests_number)),
     )
-    app.save_benchmark_csv(benchmark_type, results, dest=csv)
+    if csv:
+        app.save_benchmark_csv(benchmark_type, results, dest=csv)
+    else:
+        print(helpers.string_table_result(results))
