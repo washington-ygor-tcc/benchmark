@@ -1,6 +1,8 @@
 import time
 
-from benchmark.core.ports.time_provider_port import TimeProviderPort
+from benchmark.core.ports import TimeProviderPort
+
+__all__ = ["TimeProviderAdapter"]
 
 
 class TimeProviderAdapter(TimeProviderPort):

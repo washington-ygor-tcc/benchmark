@@ -5,8 +5,10 @@ import json
 
 from typing import Any, Dict
 from benchmark.core.adapters.utils import json_default_serializer
-from benchmark.core.domain.prediction_request import PredictionRequest
-from benchmark.core.ports.request_prediction_port import RequestPredictionPort
+from benchmark.core.domain import PredictionRequest
+from benchmark.core.ports import RequestPredictionPort
+
+__all__ = ["ClientApiRestRequestsAdapter"]
 
 
 class ClientApiRestRequestsAdapter(RequestPredictionPort):

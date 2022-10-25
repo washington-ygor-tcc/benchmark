@@ -1,6 +1,7 @@
 import os
 import asyncio
 import tqdm.auto
+import uvloop
 
 from typing import Dict, List, Union
 from benchmark.application import helpers
@@ -12,6 +13,8 @@ from benchmark.core.types import (
     RequestGenerator,
 )
 from benchmark.core.domain.prediction_request import PredictionRequest
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def run_benchmark(
@@ -32,7 +35,7 @@ def run_benchmark(
         benchmark.run(features, *adapters) for features in request_generator
     ]
 
-    return asyncio.get_event_loop().run_until_complete(
+    return asyncio.run(
         tqdm.auto.tqdm.gather(*tasks, disable=not show_progress_bar)
     )
 

@@ -3,6 +3,8 @@ from typing import Dict, Any
 
 from benchmark.core.domain.prediction_request import PredictionRequest
 
+__all__ = ["RequestPredictionPort"]
+
 
 class RequestPredictionPort(abc.ABC):
     @abc.abstractmethod

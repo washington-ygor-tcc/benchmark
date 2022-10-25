@@ -1,6 +1,8 @@
 import uuid
 
-from benchmark.core.ports.id_provider_port import IdProviderPort
+from benchmark.core.ports import IdProviderPort
+
+__all__ = ["UUIDProviderAdapter"]
 
 
 class UUIDProviderAdapter(IdProviderPort):

@@ -1,8 +1,11 @@
+from __future__ import annotations
 import dataclasses
 import time
 
 from benchmark.core.types import Features, Id, Prediction
 from typing import Dict, Any
+
+__all__ = ["PredictionRequest"]
 
 
 @dataclasses.dataclass

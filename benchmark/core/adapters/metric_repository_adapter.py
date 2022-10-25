@@ -3,12 +3,14 @@ import csv
 from contextlib import contextmanager
 from typing import List
 
-from benchmark.core.ports.metric_repository_port import MetricRepositoryPort
-from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.ports import MetricRepositoryPort
+from benchmark.core.domain import PredictionRequest
 from benchmark.core.types import Id
 
 
 HEADERS = ["benchmark_id", "request_id", "start", "end"]
+
+__all__ = ["MetricRepositoryAdapter"]
 
 
 class MetricRepositoryAdapter(MetricRepositoryPort):

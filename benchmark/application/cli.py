@@ -1,3 +1,5 @@
+import asyncio
+from time import sleep
 import click
 
 from benchmark.application import app
@@ -8,9 +10,12 @@ from benchmark.application import helpers
 @click.option(
     "--type",
     "-t",
-    "benchmark_type",
-    type=click.Choice(helpers.BenchmarkTypes),
-    default=helpers.BenchmarkTypes.API,
+    "benchmark_types",
+    type=click.Choice(
+        helpers.BenchmarkTypes,
+    ),
+    multiple=True,
+    default=[helpers.BenchmarkTypes.API],
     help="specify the target comunication for the benchmark",
 )
 @click.option(
@@ -32,12 +37,21 @@ from benchmark.application import helpers
     ),
     default=None,
 )
-def run(benchmark_type, requests_number, csv):
-    results = app.run_benchmark(
-        benchmark_type,
-        ({"id": _} for _ in range(requests_number)),
-    )
-    if csv:
-        app.save_benchmark_csv(benchmark_type, results, dest=csv)
-    else:
-        print(helpers.string_table_result(results))
+@click.option("--table", is_flag=True)
+@click.option("--stats", is_flag=True)
+def run(benchmark_types, requests_number, csv, table, stats):
+    def _run(benchmark_type):
+        results = app.run_benchmark(
+            benchmark_type,
+            ({"id": i} for i in range(requests_number)),
+        )
+        if csv:
+            app.save_benchmark_csv(benchmark_type, results, dest=csv)
+        if table:
+            print(helpers.string_table_result(results))
+        if stats:
+            print(helpers.stats(results))
+
+    for benchmark_type in benchmark_types:
+        print(benchmark_type.upper())
+        _run(benchmark_type)

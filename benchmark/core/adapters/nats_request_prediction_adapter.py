@@ -2,13 +2,18 @@ import asyncio
 import json
 import nats
 
-from contextlib import asynccontextmanager
-from nats.aio.client import Client
-from benchmark.core.domain.prediction_request import PredictionRequest
-from benchmark.core.adapters.utils import json_default_serializer
-from typing import Any, AsyncContextManager, Callable, Dict
 
-from benchmark.core.ports.request_prediction_port import RequestPredictionPort
+from contextlib import asynccontextmanager, contextmanager
+from typing import Any, AsyncContextManager, Awaitable, Callable, Dict
+from nats.aio.client import Client
+from nats.aio.subscription import Subscription
+
+from benchmark.core.domain import PredictionRequest
+from benchmark.core.adapters.utils import (
+    json_default_serializer,
+    FutureResponses,
+)
+from benchmark.core.ports import RequestPredictionPort
 from benchmark.core.types import Id
 
 
@@ -23,29 +28,43 @@ __all__ = [
 class NatsConnection:
     def __init__(self, nats_server_url: str) -> None:
         self.__nats_server_url = nats_server_url
+        self.__conn = None
 
-    @asynccontextmanager
-    async def connect(self) -> AsyncContextManager[Client]:
-        nats_connection = None
+    async def connect(self) -> Client:
         try:
-            nats_connection = await nats.connect(self.__nats_server_url)
-            yield nats_connection
+            if self.__conn is None or self.__conn.is_closed:
+                self.__conn = await nats.connect(
+                    self.__nats_server_url, drain_timeout=90
+                )
+            return self.__conn
         except Exception as e:
             raise e
-        finally:
-            if nats_connection:
-                await nats_connection.drain()
+
+    async def disconnect(self) -> None:
+        try:
+            if self.__conn is not None:
+                await self.__conn.drain()
+                self.__conn = None
+        except Exception as e:
+            raise e
+
+    @asynccontextmanager
+    async def connect_conext(self) -> AsyncContextManager[Client]:
+        try:
+            yield await self.connect()
+            await self.disconnect()
+        except Exception as e:
+            raise e
 
 
 class PublisherAdatper:
     def __init__(self, nats_connection: NatsConnection, channel: str):
-        self.__nats = nats_connection
+        self.__nats_conn = nats_connection
         self.__channel = channel
 
     async def publish(self, message: PredictionRequest) -> None:
-        connection: Client
-        async with self.__nats.connect() as connection:
-            await connection.publish(
+        async with self.__nats_conn.connect_conext() as conn:
+            await conn.publish(
                 self.__channel,
                 json.dumps(
                     message.todict(), default=json_default_serializer
@@ -55,37 +74,67 @@ class PublisherAdatper:
 
 class SubscriberAdapter:
     def __init__(self, nats_connection: NatsConnection, channel: str) -> None:
-        self.__nats = nats_connection
+        self.__nats_conn = nats_connection
         self.__channel = channel
-        self.subscription = None
+        self.__subscription_task = None
+        self.subscription: Subscription = None
 
-    def __to_json(self, msg):
-        return json.loads(msg.data)
-
-    async def stop(self) -> None:
+    async def __stop_subscription(self) -> None:
         if self.subscription is not None:
             try:
                 await self.subscription.unsubscribe()
                 self.subscription = None
                 await asyncio.sleep(0)
-            except nats.errors.ConnectionDrainingError:
-                pass
+            except Exception as e:
+                raise e
 
     async def start(
-        self,
-        handle_callback: Callable[[Dict[str, Any]], None],
-        on_started: Callable = None,
+        self, handler: Callable[[Dict[str, Any]], Awaitable[None]]
     ):
-        connection: Client
+        is_subscription_ready = self.loop.create_future()
+        self.__subscription_task = self.loop.create_task(
+            self.__start_subscription(
+                handler,
+                lambda: (
+                    not is_subscription_ready.done()
+                    and is_subscription_ready.set_result(None)
+                ),
+            )
+        )
 
-        async def callback(msg):
-            await handle_callback(self.__to_json(msg))
+        await is_subscription_ready
 
-        async with self.__nats.connect() as connection:
-            self.subscription = await connection.subscribe(self.__channel)
-            on_started and on_started()
+    async def stop(self, should_stop):
+        if self.__subscription_task is not None and should_stop():
+            await self.__stop_subscription()
+            self.__subscription_task.cancel()
+            self.__subscription_task = None
+
+    async def __start_subscription(
+        self,
+        handle_callback: Callable[[Dict[str, Any]], Awaitable[None]],
+        set_is_ready: Callable = None,
+    ):
+        async with self.__nats_conn.connect_conext() as conn:
+            self.subscription = await conn.subscribe(self.__channel)
+            set_is_ready()
+
             async for msg in self.subscription.messages:
-                await callback(msg)
+                asyncio.create_task(handle_callback(json.loads(msg.data)))
+
+    @asynccontextmanager
+    async def start_context(
+        self,
+        handler: Callable[[Dict[str, Any]], Awaitable[None]],
+        should_stop: Callable[[Any], bool],
+    ):
+        await self.start(handler)
+        yield
+        await self.stop(should_stop)
+
+    @property
+    def loop(self):
+        return asyncio.get_event_loop()
 
 
 class MessagingAdapter(RequestPredictionPort):
@@ -94,63 +143,29 @@ class MessagingAdapter(RequestPredictionPort):
     ) -> None:
         self.__publisher = publisher
         self.__subscriber = subscriber
-        self.__subscription_task = None
-        self.__responses: Dict[Id, asyncio.Future] = {}
+        self.__responses = FutureResponses()
 
     async def get_prediction(
         self, request: PredictionRequest
     ) -> PredictionRequest:
         return await self.__publish(request)
 
-    async def __handle(self, data: Dict[str, Any]):
-        if (
-            (request_id := data.get("request_id"))
-            and request_id in self.__responses
-            and not self.__responses[request_id].done()
-        ):
-            self.__responses[request_id].set_result(data)
-
-    async def __start_subscription(self):
-        is_subscription_ready = asyncio.get_event_loop().create_future()
-
-        def set_is_subscription_ready():
-            if not is_subscription_ready.done():
-                is_subscription_ready.set_result(None)
-
-        self.__subscription_task = asyncio.get_event_loop().create_task(
-            self.__subscriber.start(
-                self.__handle,
-                set_is_subscription_ready,
-            )
-        )
-
-        await is_subscription_ready
-
-    async def __stop_subscription(self):
-        if self.__subscription_task is not None and len(self.__responses) == 0:
-            await self.__subscriber.stop()
-            self.__subscription_task.cancel()
-            self.__subscription_task = None
-
-    def __add_future_response(self, request_id: Id):
-        self.__responses[
-            request_id
-        ] = asyncio.get_running_loop().create_future()
-
-    def __remove_future_response(self, request_id: Id):
-        self.__responses.pop(request_id, None)
-
-    async def __get_response(self, request_id: Id):
-        return await self.__responses[request_id]
-
     async def __publish(self, prediction_request: PredictionRequest):
-        self.__add_future_response(prediction_request.request_id)
-        await self.__start_subscription()
+        with self.__with_response(
+            prediction_request.request_id
+        ) as future_response:
+            async with self.__subscriber.start_context(
+                self.__handler, self.__responses.is_empty
+            ):
+                await self.__publisher.publish(prediction_request)
+                return (await future_response).get("prediction")
 
-        await self.__publisher.publish(prediction_request)
-        response = await self.__get_response(prediction_request.request_id)
+    @contextmanager
+    def __with_response(self, request_id: Id):
+        self.__responses.set(request_id)
+        yield self.__responses.get(request_id)
+        self.__responses.remove(request_id)
 
-        self.__remove_future_response(prediction_request.request_id)
-        await self.__stop_subscription()
-
-        return response
+    async def __handler(self, data: Dict[str, Any]):
+        if request_id := data.get("request_id"):
+            self.__responses.set_result(request_id, data)

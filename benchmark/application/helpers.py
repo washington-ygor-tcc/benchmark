@@ -4,7 +4,7 @@ import pkg_resources
 import yaml
 import collections.abc
 import tabulate
-
+import statistics
 
 from datetime import datetime
 from typing import Dict, Union, Tuple, List
@@ -94,7 +94,52 @@ def get_benchmark_adapters(
 
 
 def string_table_result(results: List[PredictionRequest]):
+    if not all([result.prediction for result in results]):
+        print("Not OK")
+
+    def as_date(ts):
+        return datetime.fromtimestamp(ts).strftime(".%f")
+
     return tabulate.tabulate(
-        [[result.request_id, result.start, result.end] for result in results],
-        headers=["Id", "Start", "End"],
+        [
+            [
+                result.request_id,
+                as_date(result.start),
+                as_date(result.end),
+                result.prediction,
+            ]
+            for result in results
+        ],
+        headers=["Id", "Start", "End", "Data"],
+        floatfmt=".20f",
+    )
+
+
+def stats(results: List[PredictionRequest]):
+    times = list(map(lambda r: r.end - r.start, results))
+    first_request = min(map(lambda r: r.start, results))
+    last_request = max(map(lambda r: r.end, results))
+    total_time = last_request - first_request
+
+    return tabulate.tabulate(
+        [
+            [
+                len(results),
+                total_time,
+                min(times),
+                max(times),
+                statistics.mean(times),
+                statistics.stdev(times),
+                len(results) / total_time,
+            ]
+        ],
+        headers=[
+            "Nº Requests",
+            "Total time",
+            "Min",
+            "Max",
+            "Mean",
+            "STD",
+            "Req/s",
+        ],
     )
