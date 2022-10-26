@@ -5,14 +5,14 @@ import uvloop
 
 from typing import Dict, List, Union
 from benchmark.application import helpers
-from benchmark.core.adapters.metric_repository_adapter import (
+from benchmark.core.adapters import (
     MetricRepositoryAdapter,
 )
 from benchmark.core.use_cases import benchmark
 from benchmark.core.types import (
     RequestGenerator,
 )
-from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.domain import PredictionRequest
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 

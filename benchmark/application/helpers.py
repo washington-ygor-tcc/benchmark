@@ -17,6 +17,7 @@ from benchmark.core.adapters import (
     UUIDProviderAdapter,
     TimeProviderAdapter,
     ClientApiRestRequestsAdapter,
+    ClientApiRestAiohttpAdapter,
 )
 
 from benchmark.core.ports import (
@@ -25,7 +26,7 @@ from benchmark.core.ports import (
     TimeProviderPort,
 )
 
-from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.domain import PredictionRequest
 
 
 __benchmark_adapters = Tuple[
@@ -80,7 +81,7 @@ def get_benchmark_adapters(
 
     if benchmark_type == BenchmarkTypes.API:
         api_config = config["api"]
-        client_api = ClientApiRestRequestsAdapter(
+        client_api = ClientApiRestAiohttpAdapter(
             "{}:{}{}".format(
                 api_config["host"],
                 api_config["port"],
