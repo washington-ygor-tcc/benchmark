@@ -8,12 +8,13 @@ from benchmark.core.types import Id
 from dataclasses import dataclass, field
 
 
-def json_default_serializer(obj):
+def json_default_serializer(self, obj):
     if isinstance(obj, (datetime.datetime, datetime.date)):
         return obj.isoformat()
     if isinstance(obj, uuid.UUID):
         return obj.hex
-    return json.JSONEncoder.default(obj)
+    print("ddasdas")
+    return json.JSONEncoder.default(self, obj)
 
 
 @dataclass

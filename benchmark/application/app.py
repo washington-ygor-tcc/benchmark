@@ -2,8 +2,9 @@ import os
 import asyncio
 import tqdm.auto
 import uvloop
+import time
 
-from typing import Dict, List, Union
+from typing import List, Union
 from benchmark.application import helpers
 from benchmark.core.adapters import CSVMetricRepositoryAdapter, UUIDProviderAdapter
 from benchmark.core.use_cases import run_benchmark_use_case, save_benchmark_use_case
@@ -18,7 +19,7 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 def run_benchmark(
     benchmark_type: helpers.BenchmarkTypes,
     request_generator: RequestGenerator,
-    config: Dict = {},
+    config: helpers.MassagingConfig = {},
     show_progress_bar: bool = True,
 ) -> List[PredictionRequest]:
 
@@ -29,7 +30,11 @@ def run_benchmark(
         run_benchmark_use_case.run(features, *adapters) for features in request_generator
     ]
 
-    return asyncio.run(tqdm.auto.tqdm.gather(*tasks, disable=not show_progress_bar))
+    start = time.perf_counter()
+    results = asyncio.get_event_loop().run_until_complete(tqdm.auto.tqdm.gather(*tasks))
+    end = time.perf_counter()
+
+    return results, start, end
 
 
 def save_benchmark_csv(

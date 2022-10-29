@@ -7,7 +7,7 @@ import tabulate
 import statistics
 
 from datetime import datetime
-from typing import Dict, Union, Tuple, List
+from typing import Dict, Union, Tuple, List, TypedDict
 
 from benchmark.core.adapters import (
     NatsConnection,
@@ -31,10 +31,28 @@ from benchmark.core.domain import PredictionRequest
 __benchmark_adapters = Tuple[RequestPredictionPort, TimeProviderPort, IdProviderPort]
 
 
+class APIConfig(TypedDict):
+    host: str
+    port: int
+    prediction_route: str
+
+
+class MassagingConfig(TypedDict):
+    host: str
+    port: int
+    request_channel: str
+    response_channel: str
+
+
+class Config(TypedDict):
+    API: APIConfig
+    MSG: MassagingConfig
+
+
 @enum.unique
 class BenchmarkTypes(str, enum.Enum):
-    API = "api"
-    MESSAGING = "messaging"
+    API = "API"
+    MSG = "MSG"
 
 
 def update_config(update: Dict, config: Dict) -> Dict:
@@ -55,10 +73,10 @@ def get_timestamp():
 
 
 def get_benchmark_adapters(
-    benchmark_type: BenchmarkTypes, config: Dict
+    benchmark_type: BenchmarkTypes, config: Config
 ) -> __benchmark_adapters:
-    if benchmark_type == BenchmarkTypes.MESSAGING:
-        nats_config = config["nats"]
+    if benchmark_type == BenchmarkTypes.MSG:
+        nats_config = config[BenchmarkTypes.MSG]
         id_provider = UUIDProviderAdapter()
         time_provider = TimeProviderAdapter()
         nats_url = "{}:{}".format(nats_config["host"], nats_config["port"])
@@ -77,12 +95,13 @@ def get_benchmark_adapters(
         return messaging_adapter, time_provider, id_provider
 
     if benchmark_type == BenchmarkTypes.API:
-        api_config = config["api"]
+        api_config = config[BenchmarkTypes.API]
+
         client_api = ClientApiRestAiohttpAdapter(
             "{}:{}{}".format(
                 api_config["host"],
                 api_config["port"],
-                api_config["prediction"],
+                api_config["prediction_route"],
             )
         )
         id_provider = UUIDProviderAdapter()
@@ -113,11 +132,9 @@ def string_table_result(results: List[PredictionRequest]):
     )
 
 
-def stats(results: List[PredictionRequest]):
-    times = list(map(lambda r: r.end - r.start, results))
-    first_request = min(map(lambda r: r.start, results))
-    last_request = max(map(lambda r: r.end, results))
-    total_time = last_request - first_request
+def stats(results: List[PredictionRequest], start: float, end: float):
+    total_time = end - start
+    times = [result.end - result.start for result in results]
 
     return tabulate.tabulate(
         [
@@ -133,7 +150,7 @@ def stats(results: List[PredictionRequest]):
         ],
         headers=[
             "Nº Requests",
-            "Total time",
+            "Total time (s)",
             "Min",
             "Max",
             "Mean",

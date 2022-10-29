@@ -1,5 +1,3 @@
-import asyncio
-from time import sleep
 import click
 
 from benchmark.application import app
@@ -41,17 +39,22 @@ from benchmark.application import helpers
 @click.option("--stats", is_flag=True)
 def run(benchmark_types, requests_number, csv, table, stats):
     def _run(benchmark_type):
-        results = app.run_benchmark(
+        results, start, end = app.run_benchmark(
             benchmark_type,
             ({"id": i} for i in range(requests_number)),
         )
+
         if csv:
             app.save_benchmark_csv(benchmark_type, results, dest=csv)
         if table:
             print(helpers.string_table_result(results))
         if stats:
-            print(helpers.stats(results))
+            print(helpers.stats(results, start, end))
 
     for benchmark_type in benchmark_types:
         print(benchmark_type.upper())
         _run(benchmark_type)
+
+
+if __name__ == "__main__":
+    run()

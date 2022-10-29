@@ -4,7 +4,13 @@ import nats
 
 
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, AsyncContextManager, Awaitable, Callable, Dict
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    AsyncIterator,
+)
 from nats.aio.client import Client
 from nats.aio.subscription import Subscription
 
@@ -32,29 +38,33 @@ class NatsConnection:
 
     async def connect(self) -> Client:
         try:
-            if self.__conn is None or self.__conn.is_closed:
+            if (
+                self.__conn is None
+                or self.__conn.is_closed
+                or not self.__conn.is_draining
+            ):
                 self.__conn = await nats.connect(
-                    self.__nats_server_url, drain_timeout=90
+                    self.__nats_server_url,
                 )
             return self.__conn
         except Exception as e:
-            raise e
+            pass
 
     async def disconnect(self) -> None:
         try:
-            if self.__conn is not None:
+            if self.__conn is not None and not self.__conn.is_draining:
                 await self.__conn.drain()
                 self.__conn = None
         except Exception as e:
-            raise e
+            pass
 
     @asynccontextmanager
-    async def connect_conext(self) -> AsyncContextManager[Client]:
+    async def connect_conext(self) -> AsyncIterator[Client]:
         try:
             yield await self.connect()
-            await self.disconnect()
+            # await self.disconnect()
         except Exception as e:
-            raise e
+            pass
 
 
 class PublisherAdatper:
@@ -79,15 +89,6 @@ class SubscriberAdapter:
         self.__subscription_task = None
         self.subscription: Subscription = None
 
-    async def __stop_subscription(self) -> None:
-        if self.subscription is not None:
-            try:
-                await self.subscription.unsubscribe()
-                self.subscription = None
-                await asyncio.sleep(0)
-            except Exception as e:
-                raise e
-
     async def start(
         self, handler: Callable[[Dict[str, Any]], Awaitable[None]]
     ):
@@ -110,18 +111,6 @@ class SubscriberAdapter:
             self.__subscription_task.cancel()
             self.__subscription_task = None
 
-    async def __start_subscription(
-        self,
-        handle_callback: Callable[[Dict[str, Any]], Awaitable[None]],
-        set_is_ready: Callable = None,
-    ):
-        async with self.__nats_conn.connect_conext() as conn:
-            self.subscription = await conn.subscribe(self.__channel)
-            set_is_ready()
-
-            async for msg in self.subscription.messages:
-                asyncio.create_task(handle_callback(json.loads(msg.data)))
-
     @asynccontextmanager
     async def start_context(
         self,
@@ -131,6 +120,29 @@ class SubscriberAdapter:
         await self.start(handler)
         yield
         await self.stop(should_stop)
+
+    async def __start_subscription(
+        self,
+        handle_callback: Callable[[Dict[str, Any]], Awaitable[None]],
+        set_is_ready: Callable = None,
+    ):
+        async with self.__nats_conn.connect_conext() as conn:
+            if self.subscription is None:
+                self.subscription = await conn.subscribe(self.__channel)
+
+            set_is_ready()
+
+            async for msg in self.subscription.messages:
+                await handle_callback(json.loads(msg.data))
+
+    async def __stop_subscription(self) -> None:
+        if self.subscription is not None:
+            try:
+                await self.subscription.unsubscribe()
+                self.subscription = None
+                await asyncio.sleep(0)
+            except Exception as e:
+                raise e
 
     @property
     def loop(self):
@@ -158,7 +170,8 @@ class MessagingAdapter(RequestPredictionPort):
                 self.__handler, self.__responses.is_empty
             ):
                 await self.__publisher.publish(prediction_request)
-                return (await future_response).get("prediction")
+                response = await future_response
+                return response.get("prediction")
 
     @contextmanager
     def __with_response(self, request_id: Id):

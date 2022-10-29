@@ -7,4 +7,4 @@ __all__ = ["TimeProviderAdapter"]
 
 class TimeProviderAdapter(TimeProviderPort):
     def time(self, *args, **kwargs) -> float:
-        return time.monotonic()
+        return time.perf_counter()
