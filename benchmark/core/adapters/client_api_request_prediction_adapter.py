@@ -8,7 +8,7 @@ from benchmark.core.adapters.utils import json_default_serializer
 from benchmark.core.domain import PredictionRequest
 from benchmark.core.ports import RequestPredictionPort
 
-__all__ = ["ClientApiRestRequestsAdapter", "ClientApiRestAiohttpAdapter"]
+__all__ = ["ClientApiRestAiohttpAdapter"]
 
 
 class ClientApiRestAiohttpAdapter(RequestPredictionPort):
