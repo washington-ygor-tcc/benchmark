@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 from .utils import id_provider
 
-from benchmark.core.use_cases import benchmark
+from benchmark.core.use_cases import run_benchmark_use_case
 from benchmark.core.ports.request_prediction_port import RequestPredictionPort
 from benchmark.core.ports.metric_repository_port import MetricRepositoryPort
 from benchmark.core.ports.id_provider_port import IdProviderPort
