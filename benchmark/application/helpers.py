@@ -1,5 +1,6 @@
 import enum
 import os
+import time
 import pkg_resources
 import yaml
 import collections.abc
@@ -10,14 +11,12 @@ from datetime import datetime
 from typing import Dict, Union, Tuple, List, TypedDict
 
 from benchmark.core.adapters import (
-    NatsConnection,
-    PublisherAdatper,
-    SubscriberAdapter,
-    MessagingAdapter,
+    NatsMessagingAdapter,
     UUIDProviderAdapter,
     TimeProviderAdapter,
     ClientApiRestAiohttpAdapter,
 )
+
 
 from benchmark.core.ports import (
     IdProviderPort,
@@ -81,15 +80,10 @@ def get_benchmark_adapters(
         time_provider = TimeProviderAdapter()
         nats_url = "{}:{}".format(nats_config["host"], nats_config["port"])
 
-        messaging_adapter = MessagingAdapter(
-            PublisherAdatper(
-                NatsConnection(nats_url),
-                nats_config["request_channel"],
-            ),
-            SubscriberAdapter(
-                NatsConnection(nats_url),
-                nats_config["response_channel"],
-            ),
+        messaging_adapter = NatsMessagingAdapter.create(
+            nats_url,
+            nats_config["request_channel"],
+            nats_config["response_channel"],
         )
 
         return messaging_adapter, time_provider, id_provider
@@ -158,3 +152,10 @@ def stats(results: List[PredictionRequest], start: float, end: float):
             "Req/s",
         ],
     )
+
+
+def batch(iterable, batch_size=1, interval=0):
+    total = len(iterable)
+    for start in range(0, total, batch_size):
+        yield iterable[start : min(start + batch_size, total)]
+        time.sleep(interval)

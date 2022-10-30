@@ -36,7 +36,7 @@ class TestBenchmark(unittest.IsolatedAsyncioTestCase):
             side_effect=lambda *args, **kwargs: {"status": "ok"}
         )
 
-        result = await benchmark.run(
+        result = await run_benchmark_use_case.run(
             {"id", 1},
             self.request_prediction,
             self.time_provider,
@@ -54,7 +54,7 @@ class TestBenchmark(unittest.IsolatedAsyncioTestCase):
 
         results = await asyncio.gather(
             *[
-                benchmark.run(
+                run_benchmark_use_case.run(
                     {"id", i},
                     self.request_prediction,
                     self.time_provider,

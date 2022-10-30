@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Any, Generator, NoReturn, Protocol
+from typing import Callable, Dict, Any, Generator
 
 
 Total = int

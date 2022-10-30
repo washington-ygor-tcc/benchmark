@@ -7,4 +7,4 @@ __all__ = ["UUIDProviderAdapter"]
 
 class UUIDProviderAdapter(IdProviderPort):
     def next_id(self) -> int | str:
-        return uuid.uuid1().hex
+        return uuid.uuid4().hex

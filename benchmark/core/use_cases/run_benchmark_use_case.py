@@ -5,7 +5,6 @@ from benchmark.core.ports import (
     IdProviderPort,
     RequestPredictionPort,
     TimeProviderPort,
-    MetricRepositoryPort,
 )
 from benchmark.core.types import Id, Features
 
@@ -17,9 +16,7 @@ def __setup_request(
     time_provider: TimeProviderPort,
 ):
     try:
-        request = PredictionRequest(
-            id_provider.next_id(), features, time_provider.time()
-        )
+        request = PredictionRequest(id_provider.next_id(), features, time_provider.time())
         yield request
     finally:
         request.end = time_provider.time()

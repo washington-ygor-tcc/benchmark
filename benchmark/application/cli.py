@@ -25,6 +25,20 @@ from benchmark.application import helpers
     help="specify the number of request predictions the benchmark will make",
 )
 @click.option(
+    "--batch-size",
+    "-s",
+    type=int,
+    default=100,
+    help="specify the batch size the benchmark will make",
+)
+@click.option(
+    "--interval",
+    "-t",
+    type=int,
+    default=100,
+    help="specify the batch size the benchmark will make",
+)
+@click.option(
     "--csv",
     type=click.Path(
         exists=False,
@@ -37,11 +51,16 @@ from benchmark.application import helpers
 )
 @click.option("--table", is_flag=True)
 @click.option("--stats", is_flag=True)
-def run(benchmark_types, requests_number, csv, table, stats):
+def run(benchmark_types, requests_number, batch_size, interval, csv, table, stats):
     def _run(benchmark_type):
         results, start, end = app.run_benchmark(
             benchmark_type,
-            ({"id": i} for i in range(requests_number)),
+            helpers.batch(
+                [{"id": i} for i in range(requests_number)],
+                batch_size=batch_size,
+                interval=interval,
+            ),
+            total=requests_number,
         )
 
         if csv:
