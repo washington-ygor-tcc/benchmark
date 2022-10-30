@@ -10,10 +10,10 @@ from benchmark.core.types import Id
 
 HEADERS = ["benchmark_id", "request_id", "start", "end"]
 
-__all__ = ["MetricRepositoryAdapter"]
+__all__ = ["CSVMetricRepositoryAdapter"]
 
 
-class MetricRepositoryAdapter(MetricRepositoryPort):
+class CSVMetricRepositoryAdapter(MetricRepositoryPort):
     def __init__(self, filename: str):
         self.filename = filename
 

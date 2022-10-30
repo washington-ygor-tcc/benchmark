@@ -16,7 +16,6 @@ from benchmark.core.adapters import (
     MessagingAdapter,
     UUIDProviderAdapter,
     TimeProviderAdapter,
-    ClientApiRestRequestsAdapter,
     ClientApiRestAiohttpAdapter,
 )
 
@@ -29,9 +28,7 @@ from benchmark.core.ports import (
 from benchmark.core.domain import PredictionRequest
 
 
-__benchmark_adapters = Tuple[
-    RequestPredictionPort, TimeProviderPort, IdProviderPort
-]
+__benchmark_adapters = Tuple[RequestPredictionPort, TimeProviderPort, IdProviderPort]
 
 
 @enum.unique
