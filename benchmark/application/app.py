@@ -4,6 +4,7 @@ import tqdm.auto
 import uvloop
 import time
 
+from tqdm.auto import tqdm
 from typing import List, Union
 from benchmark.application import helpers
 from benchmark.core.adapters import CSVMetricRepositoryAdapter, UUIDProviderAdapter
@@ -29,21 +30,23 @@ def run_benchmark(
     results = []
 
     start = time.perf_counter()
-    with tqdm.auto.tqdm(
+
+    with tqdm(
         total=total, desc="Total", disable=not show_total_progress_bar
-    ) as progressbar:
-        for k, batch in enumerate(request_generator, start=1):
+    ) as progress_bar:
+        for iteration, batch in enumerate(request_generator, start=1):
             tasks = [
                 run_benchmark_use_case.run(features, *adapters) for features in batch
             ]
             batch_result = asyncio.get_event_loop().run_until_complete(
-                tqdm.auto.tqdm.gather(
-                    *tasks, disable=not show_batch_progress_bar, desc=f"Batch {k}"
+                tqdm.gather(
+                    *tasks,
+                    desc=f"Batch - {iteration}",
+                    disable=not show_batch_progress_bar,
                 )
             )
-
-            progressbar.update(len(batch_result))
             results.extend(batch_result)
+            progress_bar.update(len(batch_result))
 
     end = time.perf_counter()
 

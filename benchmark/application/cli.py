@@ -21,21 +21,28 @@ from benchmark.application import helpers
     "-n",
     "requests_number",
     type=int,
-    required=True,
+    default=None,
     help="specify the number of request predictions the benchmark will make",
 )
 @click.option(
+    "--runtime",
+    "-r",
+    type=float,
+    default=None,
+    help="specify the batch size the benchmark will make",
+)
+@click.option(
     "--batch-size",
-    "-s",
+    "-b",
     type=int,
     default=100,
     help="specify the batch size the benchmark will make",
 )
 @click.option(
     "--interval",
-    "-t",
-    type=int,
-    default=100,
+    "-i",
+    type=float,
+    default=0,
     help="specify the batch size the benchmark will make",
 )
 @click.option(
@@ -51,16 +58,22 @@ from benchmark.application import helpers
 )
 @click.option("--table", is_flag=True)
 @click.option("--stats", is_flag=True)
-def run(benchmark_types, requests_number, batch_size, interval, csv, table, stats):
+def run(
+    benchmark_types, requests_number, runtime, batch_size, interval, csv, table, stats
+):
     def _run(benchmark_type):
         results, start, end = app.run_benchmark(
             benchmark_type,
-            helpers.batch(
-                [{"id": i} for i in range(requests_number)],
+            helpers.batch_generator(
+                lambda iteration, time: {"id": iteration},
                 batch_size=batch_size,
                 interval=interval,
+                total=requests_number,
+                runtime=runtime,
             ),
             total=requests_number,
+            show_total_progress_bar=requests_number is not None,
+            show_batch_progress_bar=True,
         )
 
         if csv:

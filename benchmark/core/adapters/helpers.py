@@ -84,7 +84,7 @@ class NatsConnection:
             pass
 
 
-class PublisherAdatper:
+class NatsPublisher:
     def __init__(self, nats_connection: NatsConnection, channel: str):
         self.__nats_conn = nats_connection
         self.__channel = channel
@@ -97,7 +97,7 @@ class PublisherAdatper:
             )
 
 
-class SubscriberAdapter:
+class NatsSubscriber:
     def __init__(self, nats_connection: NatsConnection, channel: str) -> None:
         self.__nats_conn = nats_connection
         self.__channel = channel

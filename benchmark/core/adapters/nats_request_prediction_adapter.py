@@ -8,8 +8,8 @@ from typing import (
 from benchmark.core.domain import PredictionRequest
 from benchmark.core.adapters.helpers import (
     FutureResponses,
-    PublisherAdatper,
-    SubscriberAdapter,
+    NatsPublisher,
+    NatsSubscriber,
     NatsConnection,
 )
 
@@ -23,9 +23,7 @@ __all__ = [
 
 
 class NatsMessagingAdapter(RequestPredictionPort):
-    def __init__(
-        self, publisher: PublisherAdatper, subscriber: SubscriberAdapter
-    ) -> None:
+    def __init__(self, publisher: NatsPublisher, subscriber: NatsSubscriber) -> None:
         self.__publisher = publisher
         self.__subscriber = subscriber
         self.__responses = FutureResponses()
@@ -38,8 +36,8 @@ class NatsMessagingAdapter(RequestPredictionPort):
     ) -> NatsMessagingAdapter:
 
         return NatsMessagingAdapter(
-            PublisherAdatper(NatsConnection(nats_server), prediction_request_channel),
-            SubscriberAdapter(NatsConnection(nats_server), prediction_response_channe),
+            NatsPublisher(NatsConnection(nats_server), prediction_request_channel),
+            NatsSubscriber(NatsConnection(nats_server), prediction_response_channe),
         )
 
     async def get_prediction(self, request: PredictionRequest) -> PredictionRequest:

@@ -6,9 +6,9 @@ import yaml
 import collections.abc
 import tabulate
 import statistics
+import datetime
 
-from datetime import datetime
-from typing import Dict, Union, Tuple, List, TypedDict
+from typing import Any, Callable, Dict, Union, Tuple, List, TypedDict
 
 from benchmark.core.adapters import (
     NatsMessagingAdapter,
@@ -76,6 +76,7 @@ def get_benchmark_adapters(
 ) -> __benchmark_adapters:
     if benchmark_type == BenchmarkTypes.MSG:
         nats_config = config[BenchmarkTypes.MSG]
+
         id_provider = UUIDProviderAdapter()
         time_provider = TimeProviderAdapter()
         nats_url = "{}:{}".format(nats_config["host"], nats_config["port"])
@@ -154,8 +155,29 @@ def stats(results: List[PredictionRequest], start: float, end: float):
     )
 
 
-def batch(iterable, batch_size=1, interval=0):
-    total = len(iterable)
-    for start in range(0, total, batch_size):
-        yield iterable[start : min(start + batch_size, total)]
+def batch_generator(
+    next_request: Callable[[int, float], Dict[str, Any]],
+    total: int = None,
+    runtime: float = None,
+    batch_size: int = 1,
+    interval: float = 0,
+):
+    end = runtime and (datetime.datetime.now() + datetime.timedelta(seconds=runtime))
+    requests_counter = 0
+
+    while True:
+        if total is not None and requests_counter >= total:
+            break
+        if runtime is not None and datetime.datetime.now() >= end:
+            break
+
+        batch = [
+            next_request(iteration, datetime.datetime.now())
+            for iteration in range(requests_counter, requests_counter + batch_size)
+        ]
+
+        requests_counter += batch_size
+
+        yield batch
+
         time.sleep(interval)
