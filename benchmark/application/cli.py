@@ -46,6 +46,13 @@ from benchmark.application import helpers
     help="specify the batch size the benchmark will make",
 )
 @click.option(
+    "--feature_size",
+    "-f",
+    type=int,
+    default=0,
+    help="specify the batch size the benchmark will make",
+)
+@click.option(
     "--csv",
     type=click.Path(
         exists=False,
@@ -59,13 +66,21 @@ from benchmark.application import helpers
 @click.option("--table", is_flag=True)
 @click.option("--stats", is_flag=True)
 def run(
-    benchmark_types, requests_number, runtime, batch_size, interval, csv, table, stats
+    benchmark_types,
+    requests_number,
+    runtime,
+    batch_size,
+    interval,
+    feature_size,
+    csv,
+    table,
+    stats,
 ):
     def _run(benchmark_type):
         results, start, end = app.run_benchmark(
             benchmark_type,
             helpers.batch_generator(
-                lambda iteration, time: {"id": iteration},
+                lambda iteration, time: {"feature_size": feature_size, "iter": iteration},
                 batch_size=batch_size,
                 interval=interval,
                 total=requests_number,
