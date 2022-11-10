@@ -146,9 +146,9 @@ def stats(results: List[PredictionRequest], start: float, end: float):
         headers=[
             "Nº Requests",
             "Total time (s)",
-            "Min",
-            "Max",
-            "Mean",
+            "Min (s)",
+            "Max (s)",
+            "Mean (s)",
             "STD",
             "Req/s",
         ],
@@ -171,9 +171,15 @@ def batch_generator(
         if runtime is not None and datetime.datetime.now() >= end:
             break
 
+        limit = (
+            requests_counter + batch_size
+            if total is None
+            else requests_counter + min(batch_size, total)
+        )
+
         batch = [
             next_request(iteration, datetime.datetime.now())
-            for iteration in range(requests_counter, requests_counter + batch_size)
+            for iteration in range(requests_counter, limit)
         ]
 
         requests_counter += batch_size

@@ -14,7 +14,7 @@ from benchmark.application import helpers
     ),
     multiple=True,
     default=[helpers.BenchmarkTypes.API],
-    help="specify the target comunication for the benchmark",
+    help="the target communication for the benchmark",
 )
 @click.option(
     "--requests-number",
@@ -22,35 +22,35 @@ from benchmark.application import helpers
     "requests_number",
     type=int,
     default=None,
-    help="specify the number of request predictions the benchmark will make",
+    help="the number of request predictions to perform",
 )
 @click.option(
     "--runtime",
     "-r",
     type=float,
     default=None,
-    help="specify the batch size the benchmark will make",
+    help="the period of time in seconds for performing requests",
 )
 @click.option(
     "--batch-size",
     "-b",
     type=int,
     default=100,
-    help="specify the batch size the benchmark will make",
+    help="the batch size of requests to perform",
 )
 @click.option(
     "--interval",
     "-i",
     type=float,
     default=0,
-    help="specify the batch size the benchmark will make",
+    help="the interval between requests in seconds",
 )
 @click.option(
-    "--feature_size",
+    "--feature-size",
     "-f",
     type=int,
     default=0,
-    help="specify the batch size the benchmark will make",
+    help="a feature parameter to controll the complexity of the prediction",
 )
 @click.option(
     "--csv",
@@ -65,6 +65,8 @@ from benchmark.application import helpers
 )
 @click.option("--table", is_flag=True)
 @click.option("--stats", is_flag=True)
+@click.option("--batch-progress", "-bp", is_flag=True)
+@click.option("--total-progress", "-tp", is_flag=False, default=True)
 def run(
     benchmark_types,
     requests_number,
@@ -75,6 +77,8 @@ def run(
     csv,
     table,
     stats,
+    batch_progress,
+    total_progress,
 ):
     def _run(benchmark_type):
         results, start, end = app.run_benchmark(
@@ -87,8 +91,8 @@ def run(
                 runtime=runtime,
             ),
             total=requests_number,
-            show_total_progress_bar=requests_number is not None,
-            show_batch_progress_bar=True,
+            show_total_progress_bar=requests_number is not None and total_progress,
+            show_batch_progress_bar=batch_progress,
         )
 
         if csv:
