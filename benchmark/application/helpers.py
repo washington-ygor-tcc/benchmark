@@ -68,7 +68,7 @@ def get_default_config(path: Union[str, os.PathLike] = "../config.yaml"):
 
 
 def get_timestamp():
-    return datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+    return datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
 
 def get_benchmark_adapters(

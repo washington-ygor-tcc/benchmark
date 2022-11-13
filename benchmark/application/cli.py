@@ -46,11 +46,18 @@ from benchmark.application import helpers
     help="the interval between requests in seconds",
 )
 @click.option(
-    "--feature-size",
-    "-f",
+    "--complexity-factor",
+    "-cf",
     type=int,
-    default=0,
-    help="a feature parameter to controll the complexity of the prediction",
+    default=3,
+    help="it controls how complex the model prediction is (cf^3 time complexity and cf^2 space complexity)",
+)
+@click.option(
+    "--memory-overhead",
+    "-mo",
+    type=int,
+    default=1,
+    help="it increments the memory usage of the model prediction by mo^2",
 )
 @click.option(
     "--csv",
@@ -73,7 +80,8 @@ def run(
     runtime,
     batch_size,
     interval,
-    feature_size,
+    complexity_factor,
+    memory_overhead,
     csv,
     table,
     stats,
@@ -84,7 +92,11 @@ def run(
         results, start, end = app.run_benchmark(
             benchmark_type,
             helpers.batch_generator(
-                lambda iteration, time: {"feature_size": feature_size, "iter": iteration},
+                lambda iteration, time: {
+                    "complexity_factor": complexity_factor,
+                    "memory_overhead": memory_overhead,
+                    "iter": iteration,
+                },
                 batch_size=batch_size,
                 interval=interval,
                 total=requests_number,
