@@ -19,7 +19,7 @@ def run_benchmark(
     benchmark_type: helpers.BenchmarkTypes,
     request_generator: RequestGenerator,
     total: int = 0,
-    config: helpers.MassagingConfig = {},
+    config: helpers.MessagingConfig = {},
     show_total_progress_bar: bool = True,
     show_batch_progress_bar: bool = True,
 ) -> List[PredictionRequest]:

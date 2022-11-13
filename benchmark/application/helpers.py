@@ -36,7 +36,7 @@ class APIConfig(TypedDict):
     prediction_route: str
 
 
-class MassagingConfig(TypedDict):
+class MessagingConfig(TypedDict):
     host: str
     port: int
     request_channel: str
@@ -45,7 +45,7 @@ class MassagingConfig(TypedDict):
 
 class Config(TypedDict):
     API: APIConfig
-    MSG: MassagingConfig
+    MSG: MessagingConfig
 
 
 @enum.unique

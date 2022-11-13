@@ -1,10 +1,10 @@
 MSG:
-  host: "nats://localhost"
+  host: "nats://broker"
   port: 4222
   request_channel: "prediction_request_channel"
   response_channel: "prediction_response_channel"
 
 API:
-  host: "http://localhost"
+  host: "http://api"
   port: 8000
   prediction_route: "/predict"
