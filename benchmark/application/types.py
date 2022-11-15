@@ -33,12 +33,12 @@ class BenchmarkTypes(str, enum.Enum):
 @dataclass
 class BenchmarkParams:
     benchmark_type: BenchmarkTypes
-    requests_number: int
-    batch_size: int
     complexity_factor: int
     memory_overhead: int
-    interval: int
-    runtime: Optional[int]
+    requests_number: Optional[int] = 10
+    runtime: Optional[int] = None
+    batch_size: int = 10
+    interval: int = 0
     batch_progress: bool = False
     total_progress: bool = False
 
@@ -48,8 +48,9 @@ class BenchmarkParams:
 
 @dataclass
 class BenchmarkResult:
-    results: [PredictionRequest]
+    response_list: [PredictionRequest]
     params: BenchmarkParams
+    elapsed_time: float
 
     def todict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)
