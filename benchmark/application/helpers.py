@@ -10,48 +10,27 @@ import datetime
 
 from typing import Any, Callable, Dict, Union, Tuple, List, TypedDict
 
+from benchmark.application.types import (
+    APIConfig,
+    MessagingConfig,
+    Config,
+    BenchmarkTypes,
+)
 from benchmark.core.adapters import (
     NatsMessagingAdapter,
     UUIDProviderAdapter,
     TimeProviderAdapter,
     ClientApiRestAiohttpAdapter,
 )
-
-
 from benchmark.core.ports import (
     IdProviderPort,
     RequestPredictionPort,
     TimeProviderPort,
 )
-
 from benchmark.core.domain import PredictionRequest
 
 
 __benchmark_adapters = Tuple[RequestPredictionPort, TimeProviderPort, IdProviderPort]
-
-
-class APIConfig(TypedDict):
-    host: str
-    port: int
-    prediction_route: str
-
-
-class MessagingConfig(TypedDict):
-    host: str
-    port: int
-    request_channel: str
-    response_channel: str
-
-
-class Config(TypedDict):
-    API: APIConfig
-    MSG: MessagingConfig
-
-
-@enum.unique
-class BenchmarkTypes(str, enum.Enum):
-    API = "API"
-    MSG = "MSG"
 
 
 def update_config(update: Dict, config: Dict) -> Dict:

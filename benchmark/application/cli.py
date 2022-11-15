@@ -1,7 +1,6 @@
 import click
 
-from benchmark.application import app
-from benchmark.application import helpers
+from benchmark.application import app, helpers, types
 
 
 @click.command()
@@ -10,10 +9,10 @@ from benchmark.application import helpers
     "-t",
     "benchmark_types",
     type=click.Choice(
-        helpers.BenchmarkTypes,
+        types.BenchmarkTypes,
     ),
     multiple=True,
-    default=[helpers.BenchmarkTypes.API],
+    default=[types.BenchmarkTypes.API],
     help="the target communication for the benchmark",
 )
 @click.option(

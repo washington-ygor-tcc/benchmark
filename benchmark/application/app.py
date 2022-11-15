@@ -6,7 +6,7 @@ import time
 
 from tqdm.auto import tqdm
 from typing import List, Union
-from benchmark.application import helpers
+from benchmark.application import helpers, types
 from benchmark.core.adapters import CSVMetricRepositoryAdapter, UUIDProviderAdapter
 from benchmark.core.use_cases import run_benchmark_use_case, save_benchmark_use_case
 from benchmark.core.types import RequestGenerator
@@ -16,10 +16,10 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def run_benchmark(
-    benchmark_type: helpers.BenchmarkTypes,
+    benchmark_type: types.BenchmarkTypes,
     request_generator: RequestGenerator,
     total: int = 0,
-    config: helpers.MessagingConfig = {},
+    config: Union[helpers.APIConfig, helpers.MessagingConfig] = {},
     show_total_progress_bar: bool = True,
     show_batch_progress_bar: bool = True,
 ) -> List[PredictionRequest]:
@@ -54,7 +54,7 @@ def run_benchmark(
 
 
 def save_benchmark_csv(
-    benchmark_type: helpers.BenchmarkTypes,
+    benchmark_type: types.BenchmarkTypes,
     results=List[PredictionRequest],
     dest: Union[str, os.PathLike] = ".",
 ):
