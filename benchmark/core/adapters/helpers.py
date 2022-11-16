@@ -9,7 +9,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
-    AsyncIterator,
+    AsyncContextManager,
 )
 from nats.aio.client import Client
 from nats.aio.subscription import Subscription
@@ -53,35 +53,26 @@ class NatsConnection:
         self.__lock = asyncio.Lock()
 
     async def connect(self) -> Client:
-        try:
-            async with self.__lock:
-                if self.__conn is None:
-                    self.__conn = await nats.connect(
-                        self.__nats_server_url,
-                    )
+        async with self.__lock:
+            if self.__conn is None:
+                self.__conn = await nats.connect(
+                    self.__nats_server_url,
+                )
 
-                return self.__conn
-        except Exception as e:
-            pass
+            return self.__conn
 
     async def disconnect(self) -> None:
-        try:
-            async with self.__lock:
-                if self.__conn is not None and not self.__conn.is_draining:
-                    pass
-                    await self.__conn.drain()
-                    self.__conn = None
-        except Exception as e:
-            pass
+        async with self.__lock:
+            if self.__conn is not None:
+                await self.__conn.drain()
+                self.__conn = None
 
     @asynccontextmanager
-    async def connect_conext(self) -> AsyncIterator[Client]:
+    async def connect_context(self) -> AsyncContextManager[Client]:
         try:
             yield await self.connect()
+        finally:
             await self.disconnect()
-        except Exception as e:
-            print(e)
-            pass
 
 
 class NatsPublisher:
@@ -90,7 +81,7 @@ class NatsPublisher:
         self.__channel = channel
 
     async def publish(self, message: PredictionRequest) -> None:
-        async with self.__nats_conn.connect_conext() as conn:
+        async with self.__nats_conn.connect_context() as conn:
             await conn.publish(
                 self.__channel,
                 json.dumps(message.todict()).encode("utf-8"),
@@ -102,6 +93,7 @@ class NatsSubscriber:
         self.__nats_conn = nats_connection
         self.__channel = channel
         self.__subscription_task = None
+        self.__task_reference = set()
         self.__subscription: Subscription = None
         self.__lock = asyncio.Lock()
 
@@ -117,14 +109,16 @@ class NatsSubscriber:
                     ),
                 )
             )
+            self.__task_reference.add(self.__subscription_task)
+            self.__subscription_task.add_done_callback(self.__task_reference.discard)
 
         await is_subscription_ready
 
     async def stop(self, should_stop):
         async with self.__lock:
             if self.__subscription_task is not None and should_stop():
-                await self.__stop_subscription()
-                self.__subscription_task.cancel()
+                await self.__subscription.unsubscribe()
+                self.__subscription = None
                 self.__subscription_task = None
 
     @asynccontextmanager
@@ -136,16 +130,15 @@ class NatsSubscriber:
         try:
             await self.start(handler)
             yield
+        finally:
             await self.stop(should_stop)
-        except Exception as e:
-            print(e)
 
     async def __start_subscription(
         self,
         handle_callback: Callable[[Dict[str, Any]], Awaitable[None]],
         set_is_ready: Callable = None,
     ):
-        async with self.__nats_conn.connect_conext() as conn:
+        async with self.__nats_conn.connect_context() as conn:
             async with self.__lock:
                 if self.__subscription is None:
                     self.__subscription = await conn.subscribe(self.__channel)
@@ -154,16 +147,6 @@ class NatsSubscriber:
 
             async for msg in self.__subscription.messages:
                 await handle_callback(json.loads(msg.data))
-
-    async def __stop_subscription(self) -> None:
-        async with self.__lock:
-            if self.__subscription is not None:
-                try:
-                    await self.__subscription.unsubscribe()
-                    self.__subscription = None
-                    await asyncio.sleep(0)
-                except Exception as e:
-                    print(e)
 
     @property
     def loop(self):

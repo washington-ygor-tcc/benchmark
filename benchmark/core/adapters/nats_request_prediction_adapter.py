@@ -32,31 +32,33 @@ class NatsMessagingAdapter(RequestPredictionPort):
     def create(
         nats_server: str,
         prediction_request_channel: str,
-        prediction_response_channe: str,
+        prediction_response_channel: str,
     ) -> NatsMessagingAdapter:
 
         return NatsMessagingAdapter(
             NatsPublisher(NatsConnection(nats_server), prediction_request_channel),
-            NatsSubscriber(NatsConnection(nats_server), prediction_response_channe),
+            NatsSubscriber(NatsConnection(nats_server), prediction_response_channel),
         )
 
     async def get_prediction(self, request: PredictionRequest) -> PredictionRequest:
         return await self.__publish(request)
 
     async def __publish(self, prediction_request: PredictionRequest):
-        with self.__with_response(prediction_request.request_id) as future_response:
-            async with self.__subscriber.start_context(
-                self.__handler, self.__responses.is_empty
-            ):
+        async with self.__subscriber.start_context(
+            self.__handler, self.__responses.is_empty
+        ):
+            with self.__with_response(prediction_request.request_id) as future_response:
                 await self.__publisher.publish(prediction_request)
                 response = await future_response
                 return response.get("prediction")
 
     @contextmanager
     def __with_response(self, request_id: Id):
-        self.__responses.set(request_id)
-        yield self.__responses.get(request_id)
-        self.__responses.remove(request_id)
+        try:
+            self.__responses.set(request_id)
+            yield self.__responses.get(request_id)
+        finally:
+            self.__responses.remove(request_id)
 
     async def __handler(self, data: Dict[str, Any]):
         if request_id := data.get("request_id"):
