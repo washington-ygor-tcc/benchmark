@@ -97,7 +97,9 @@ class NatsSubscriber:
         self.__subscription: Subscription = None
         self.__lock = asyncio.Lock()
 
-    async def start(self, handler: Callable[[Dict[str, Any]], Awaitable[None]]):
+    async def start(
+        self, handler: Callable[[Dict[str, Any]], Awaitable[None]]
+    ):
         async with self.__lock:
             is_subscription_ready = self.loop.create_future()
             self.__subscription_task = self.loop.create_task(
@@ -110,7 +112,9 @@ class NatsSubscriber:
                 )
             )
             self.__task_reference.add(self.__subscription_task)
-            self.__subscription_task.add_done_callback(self.__task_reference.discard)
+            self.__subscription_task.add_done_callback(
+                self.__task_reference.discard
+            )
 
         await is_subscription_ready
 

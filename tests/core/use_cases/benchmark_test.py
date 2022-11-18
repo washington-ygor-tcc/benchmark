@@ -3,14 +3,17 @@ import time
 import unittest
 
 from unittest.mock import AsyncMock, Mock
-from .utils import id_provider
+from tests.utils import id_provider
 
 from benchmark.core.use_cases import run_benchmark_use_case
-from benchmark.core.ports.request_prediction_port import RequestPredictionPort
-from benchmark.core.ports.metric_repository_port import MetricRepositoryPort
-from benchmark.core.ports.id_provider_port import IdProviderPort
-from benchmark.core.ports.time_provider_port import TimeProviderPort
-from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.ports import (
+    RequestPredictionPort,
+    MetricRepositoryPort,
+    IdProviderPort,
+    TimeProviderPort,
+)
+
+from benchmark.core.domain import PredictionRequest
 
 
 class TestBenchmark(unittest.IsolatedAsyncioTestCase):

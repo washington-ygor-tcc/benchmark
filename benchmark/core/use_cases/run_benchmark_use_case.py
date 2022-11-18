@@ -6,7 +6,7 @@ from benchmark.core.ports import (
     RequestPredictionPort,
     TimeProviderPort,
 )
-from benchmark.core.types import Id, Features
+from benchmark.core.types import Features
 
 
 @contextmanager
@@ -16,7 +16,9 @@ def __setup_request(
     time_provider: TimeProviderPort,
 ):
     try:
-        request = PredictionRequest(id_provider.next_id(), features, time_provider.time())
+        request = PredictionRequest(
+            id_provider.next_id(), features, time_provider.time()
+        )
         yield request
     finally:
         request.end = time_provider.time()

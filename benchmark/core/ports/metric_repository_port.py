@@ -1,8 +1,6 @@
-import abc
-
 __all__ = ["MetricRepositoryPort"]
 
 
-class MetricRepositoryPort(abc.ABC):
+class MetricRepositoryPort:
     def save(self, *args, **kwargs):
-        pass
+        raise NotImplementedError

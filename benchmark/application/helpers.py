@@ -1,4 +1,3 @@
-import enum
 import os
 import time
 import pkg_resources
@@ -8,11 +7,9 @@ import tabulate
 import statistics
 import datetime
 
-from typing import Any, Callable, Dict, Union, Tuple, List, TypedDict
+from typing import Any, Callable, Dict, Union, Tuple, List
 
 from benchmark.application.types import (
-    APIConfig,
-    MessagingConfig,
     Config,
     BenchmarkTypes,
 )
@@ -30,7 +27,9 @@ from benchmark.core.ports import (
 from benchmark.core.domain import PredictionRequest
 
 
-__benchmark_adapters = Tuple[RequestPredictionPort, TimeProviderPort, IdProviderPort]
+__benchmark_adapters = Tuple[
+    RequestPredictionPort, TimeProviderPort, IdProviderPort
+]
 
 
 def update_config(update: Dict, config: Dict) -> Dict:
@@ -141,7 +140,9 @@ def batch_generator(
     batch_size: int = 1,
     interval: float = 0,
 ):
-    end = runtime and (datetime.datetime.now() + datetime.timedelta(seconds=runtime))
+    end = runtime and (
+        datetime.datetime.now() + datetime.timedelta(seconds=runtime)
+    )
     requests_counter = 0
 
     while True:

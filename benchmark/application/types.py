@@ -1,9 +1,9 @@
 import enum
 
-from dataclasses import dataclass
-from typing import Any, Dict, TypedDict, Optional
+from dataclasses import dataclass, asdict
+from typing import Any, Dict, TypedDict, Optional, List
 
-from benchmark.core.domain.prediction_request import PredictionRequest
+from benchmark.core.domain import PredictionRequest
 
 
 class APIConfig(TypedDict):
@@ -43,14 +43,14 @@ class BenchmarkParams:
     total_progress: bool = False
 
     def todict(self) -> Dict[str, Any]:
-        return dataclasses.asdict(self)
+        return asdict(self)
 
 
 @dataclass
 class BenchmarkResult:
-    response_list: [PredictionRequest]
+    response_list: List[PredictionRequest]
     params: BenchmarkParams
     elapsed_time: float
 
     def todict(self) -> Dict[str, Any]:
-        return dataclasses.asdict(self)
+        return asdict(self)

@@ -1,8 +1,6 @@
-import abc
-
 __all__ = ["TimeProviderPort"]
 
 
-class TimeProviderPort(abc.ABC):
+class TimeProviderPort:
     def time(self) -> float:
-        pass
+        raise NotImplementedError

@@ -1,6 +1,10 @@
 from benchmark.application.app import run_benchmark
 from benchmark.application.helpers import batch_generator
-from benchmark.application.types import BenchmarkResult, BenchmarkParams, BenchmarkTypes
+from benchmark.application.types import (
+    BenchmarkResult,
+    BenchmarkParams,
+    BenchmarkTypes,
+)
 
 
 config = {
@@ -29,5 +33,7 @@ def run_benchmark_wrapper(params: BenchmarkParams) -> BenchmarkResult:
     )
 
     return BenchmarkResult(
-        response_list=results, params=params, elapsed_time=round(end - start, 2)
+        response_list=results,
+        params=params,
+        elapsed_time=round(end - start, 2),
     )

@@ -49,7 +49,10 @@ from benchmark.application import app, helpers, types
     "-cf",
     type=int,
     default=3,
-    help="it controls how complex the model prediction is (cf^3 time complexity and cf^2 space complexity)",
+    help=(
+        "it controls how complex the model prediction is"
+        "(cf^3 time complexity and cf^2 space complexity)"
+    ),
 )
 @click.option(
     "--memory-overhead",
@@ -102,7 +105,8 @@ def run(
                 runtime=runtime,
             ),
             total=requests_number,
-            show_total_progress_bar=requests_number is not None and total_progress,
+            show_total_progress_bar=requests_number is not None
+            and total_progress,
             show_batch_progress_bar=batch_progress,
         )
 
