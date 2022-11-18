@@ -91,31 +91,26 @@ def run(
     total_progress,
 ):
     def _run(benchmark_type):
-        results, start, end = app.run_benchmark(
-            benchmark_type,
-            helpers.batch_generator(
-                lambda iteration, time: {
-                    "complexity_factor": complexity_factor,
-                    "memory_overhead": memory_overhead,
-                    "iter": iteration,
-                },
+        results = app.run_benchmark(
+            params=types.BenchmarkParams(
+                benchmark_type=benchmark_type,
+                complexity_factor=complexity_factor,
+                memory_overhead=memory_overhead,
+                requests_number=requests_number,
+                runtime=runtime,
                 batch_size=batch_size,
                 interval=interval,
-                total=requests_number,
-                runtime=runtime,
-            ),
-            total=requests_number,
-            show_total_progress_bar=requests_number is not None
-            and total_progress,
-            show_batch_progress_bar=batch_progress,
+                batch_progress=batch_progress,
+                total_progress=total_progress,
+            )
         )
 
         if csv:
-            app.save_benchmark_csv(benchmark_type, results, dest=csv)
+            app.save_benchmark_csv(benchmark_type, results.response_list, dest=csv)
         if table:
-            print(helpers.string_table_result(results))
+            print(helpers.string_table_result(results.response_list))
         if stats:
-            print(helpers.stats(results, start, end))
+            print(helpers.stats(results))
 
     for benchmark_type in benchmark_types:
         print(benchmark_type.upper())

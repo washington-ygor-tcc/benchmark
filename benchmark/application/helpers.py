@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Union, Tuple, List
 from benchmark.application.types import (
     Config,
     BenchmarkTypes,
+    BenchmarkResult,
 )
 from benchmark.core.adapters import (
     NatsMessagingAdapter,
@@ -27,9 +28,7 @@ from benchmark.core.ports import (
 from benchmark.core.domain import PredictionRequest
 
 
-__benchmark_adapters = Tuple[
-    RequestPredictionPort, TimeProviderPort, IdProviderPort
-]
+__benchmark_adapters = Tuple[RequestPredictionPort, TimeProviderPort, IdProviderPort]
 
 
 def update_config(update: Dict, config: Dict) -> Dict:
@@ -105,20 +104,20 @@ def string_table_result(results: List[PredictionRequest]):
     )
 
 
-def stats(results: List[PredictionRequest], start: float, end: float):
-    total_time = end - start
-    times = [result.end - result.start for result in results]
+def stats(results: BenchmarkResult):
+    response_list = results.response_list
+    times = [result.end - result.start for result in response_list]
 
     return tabulate.tabulate(
         [
             [
-                len(results),
-                total_time,
+                len(response_list),
+                results.elapsed_time,
                 min(times),
                 max(times),
                 statistics.mean(times),
                 statistics.stdev(times),
-                len(results) / total_time,
+                len(response_list) / results.elapsed_time,
             ]
         ],
         headers=[
@@ -140,9 +139,7 @@ def batch_generator(
     batch_size: int = 1,
     interval: float = 0,
 ):
-    end = runtime and (
-        datetime.datetime.now() + datetime.timedelta(seconds=runtime)
-    )
+    end = runtime and (datetime.datetime.now() + datetime.timedelta(seconds=runtime))
     requests_counter = 0
 
     while True:
