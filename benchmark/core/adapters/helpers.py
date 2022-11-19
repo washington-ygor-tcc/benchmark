@@ -6,10 +6,11 @@ from dataclasses import dataclass, field
 from contextlib import asynccontextmanager
 from typing import (
     Any,
+    AsyncIterator,
     Awaitable,
     Callable,
     Dict,
-    AsyncContextManager,
+    Set,
 )
 from nats.aio.client import Client
 from nats.aio.subscription import Subscription
@@ -49,7 +50,7 @@ class FutureResponses:
 class NatsConnection:
     def __init__(self, nats_server_url: str) -> None:
         self.__nats_server_url = nats_server_url
-        self.__conn = None
+        self.__conn: Client | None = None
         self.__lock = asyncio.Lock()
 
     async def connect(self) -> Client:
@@ -68,7 +69,7 @@ class NatsConnection:
                 self.__conn = None
 
     @asynccontextmanager
-    async def connect_context(self) -> AsyncContextManager[Client]:
+    async def connect_context(self) -> AsyncIterator[Client]:
         try:
             yield await self.connect()
         finally:
@@ -92,9 +93,9 @@ class NatsSubscriber:
     def __init__(self, nats_connection: NatsConnection, channel: str) -> None:
         self.__nats_conn = nats_connection
         self.__channel = channel
-        self.__subscription_task = None
-        self.__task_reference = set()
-        self.__subscription: Subscription = None
+        self.__subscription_task: asyncio.Task | None = None
+        self.__task_reference: Set[asyncio.Task] = set()
+        self.__subscription: Subscription | None = None
         self.__lock = asyncio.Lock()
 
     async def start(
@@ -111,10 +112,11 @@ class NatsSubscriber:
                     ),
                 )
             )
-            self.__task_reference.add(self.__subscription_task)
-            self.__subscription_task.add_done_callback(
-                self.__task_reference.discard
-            )
+            if self.__subscription_task:
+                self.__task_reference.add(self.__subscription_task)
+                self.__subscription_task.add_done_callback(
+                    self.__task_reference.discard
+                )
 
         await is_subscription_ready
 
@@ -129,7 +131,7 @@ class NatsSubscriber:
     async def start_context(
         self,
         handler: Callable[[Dict[str, Any]], Awaitable[None]],
-        should_stop: Callable[[Any], bool],
+        should_stop: Callable[[], bool],
     ):
         try:
             await self.start(handler)
@@ -140,7 +142,7 @@ class NatsSubscriber:
     async def __start_subscription(
         self,
         handle_callback: Callable[[Dict[str, Any]], Awaitable[None]],
-        set_is_ready: Callable = None,
+        set_is_ready: Callable,
     ):
         async with self.__nats_conn.connect_context() as conn:
             async with self.__lock:

@@ -1,25 +1,31 @@
-import os
 import time
-import pkg_resources
-import yaml
-import collections.abc
 import tabulate
 import statistics
 import datetime
 
-from typing import Any, Callable, Dict, Union, Tuple, List
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Tuple,
+    List,
+)
 
 from benchmark.application.types import (
-    Config,
     BenchmarkTypes,
     BenchmarkResult,
+    BenchmarkTypesLiteral,
 )
+
 from benchmark.core.adapters import (
     NatsMessagingAdapter,
     UUIDProviderAdapter,
     TimeProviderAdapter,
     ClientApiRestAiohttpAdapter,
 )
+
+from benchmark.core.types import APIConfig, MessagingConfig
+
 from benchmark.core.ports import (
     IdProviderPort,
     RequestPredictionPort,
@@ -28,61 +34,36 @@ from benchmark.core.ports import (
 from benchmark.core.domain import PredictionRequest
 
 
-__benchmark_adapters = Tuple[RequestPredictionPort, TimeProviderPort, IdProviderPort]
+__BENCHMARK_ADAPTERS = Tuple[
+    RequestPredictionPort, TimeProviderPort, IdProviderPort
+]
+
+__REQUEST_ADAPTERS: dict[BenchmarkTypes, Callable] = {
+    BenchmarkTypes.MSG: NatsMessagingAdapter.create,
+    BenchmarkTypes.API: ClientApiRestAiohttpAdapter.create,
+}
 
 
-def update_config(update: Dict, config: Dict) -> Dict:
-    for key, value in update.items():
-        if isinstance(value, collections.abc.Mapping):
-            config[key] = update_config(value, config.get(key, {}))
-        else:
-            config[key] = value
-    return config
+def get_benchmark_adapters(
+    benchmark_type: BenchmarkTypesLiteral,
+    config: APIConfig | MessagingConfig,
+) -> __BENCHMARK_ADAPTERS:
 
+    if benchmark_type not in BenchmarkTypes:
+        raise NotImplementedError
 
-def get_default_config(path: Union[str, os.PathLike] = "../config.yaml"):
-    return yaml.safe_load(pkg_resources.resource_string(__name__, path))
+    id_provider = UUIDProviderAdapter()
+    time_provider = TimeProviderAdapter()
+    request_adapter = __REQUEST_ADAPTERS[benchmark_type](config)
+
+    return request_adapter, time_provider, id_provider
 
 
 def get_timestamp():
     return datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
 
 
-def get_benchmark_adapters(
-    benchmark_type: BenchmarkTypes, config: Config
-) -> __benchmark_adapters:
-    if benchmark_type == BenchmarkTypes.MSG:
-        nats_config = config[BenchmarkTypes.MSG]
-
-        id_provider = UUIDProviderAdapter()
-        time_provider = TimeProviderAdapter()
-        nats_url = "{}:{}".format(nats_config["host"], nats_config["port"])
-
-        messaging_adapter = NatsMessagingAdapter.create(
-            nats_url,
-            nats_config["request_channel"],
-            nats_config["response_channel"],
-        )
-
-        return messaging_adapter, time_provider, id_provider
-
-    if benchmark_type == BenchmarkTypes.API:
-        api_config = config[BenchmarkTypes.API]
-
-        client_api = ClientApiRestAiohttpAdapter(
-            "{}:{}{}".format(
-                api_config["host"],
-                api_config["port"],
-                api_config["prediction_route"],
-            )
-        )
-        id_provider = UUIDProviderAdapter()
-        time_provider = TimeProviderAdapter()
-
-        return client_api, time_provider, id_provider
-
-
-def string_table_result(results: List[PredictionRequest]):
+def string_table_result(results: List[PredictionRequest]) -> str:
     if not all([result.prediction for result in results]):
         print("Not OK")
 
@@ -106,7 +87,11 @@ def string_table_result(results: List[PredictionRequest]):
 
 def stats(results: BenchmarkResult):
     response_list = results.response_list
-    times = [result.end - result.start for result in response_list]
+    times = [
+        result.end - result.start
+        for result in response_list
+        if result.end and result.start
+    ]
 
     return tabulate.tabulate(
         [
@@ -133,19 +118,21 @@ def stats(results: BenchmarkResult):
 
 
 def batch_generator(
-    next_request: Callable[[int, float], Dict[str, Any]],
-    total: int = None,
-    runtime: float = None,
+    next_request: Callable[[int, datetime.datetime], Dict[str, Any]],
+    total: int | None = None,
+    runtime: float | None = None,
     batch_size: int = 1,
     interval: float = 0,
 ):
-    end = runtime and (datetime.datetime.now() + datetime.timedelta(seconds=runtime))
+    stop_at = runtime is not None and (
+        datetime.datetime.now() + datetime.timedelta(seconds=runtime)
+    )
     requests_counter = 0
 
     while True:
         if total is not None and requests_counter >= total:
             break
-        if runtime is not None and datetime.datetime.now() >= end:
+        if stop_at and datetime.datetime.now() >= stop_at:
             break
 
         limit = (

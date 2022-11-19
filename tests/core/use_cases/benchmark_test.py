@@ -40,7 +40,7 @@ class TestBenchmark(unittest.IsolatedAsyncioTestCase):
         )
 
         result = await run_benchmark_use_case.run(
-            {"id", 1},
+            {"id": 1},
             self.request_prediction,
             self.time_provider,
             self.id_provider,
@@ -58,7 +58,7 @@ class TestBenchmark(unittest.IsolatedAsyncioTestCase):
         results = await asyncio.gather(
             *[
                 run_benchmark_use_case.run(
-                    {"id", i},
+                    {"id": i},
                     self.request_prediction,
                     self.time_provider,
                     self.id_provider,

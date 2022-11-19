@@ -1,6 +1,6 @@
 import click
 
-from benchmark.application import app, helpers, types
+from benchmark.application import app, helpers, types, config
 
 
 @click.command()
@@ -9,11 +9,22 @@ from benchmark.application import app, helpers, types
     "-t",
     "benchmark_types",
     type=click.Choice(
-        types.BenchmarkTypes,
+        list(types.BenchmarkTypes),
+        case_sensitive=False,
     ),
     multiple=True,
     default=[types.BenchmarkTypes.API],
     help="the target communication for the benchmark",
+)
+@click.option(
+    "--env",
+    "-e",
+    type=click.Choice(
+        list(config.Env),
+        case_sensitive=False,
+    ),
+    default=config.Env.LOCAL,
+    help="the enviroment config for the benchmark",
 )
 @click.option(
     "--requests-number",
@@ -78,6 +89,7 @@ from benchmark.application import app, helpers, types
 @click.option("--total-progress", "-tp", is_flag=False, default=True)
 def run(
     benchmark_types,
+    env,
     requests_number,
     runtime,
     batch_size,
@@ -102,11 +114,14 @@ def run(
                 interval=interval,
                 batch_progress=batch_progress,
                 total_progress=total_progress,
-            )
+            ),
+            enviroment=env,
         )
 
         if csv:
-            app.save_benchmark_csv(benchmark_type, results.response_list, dest=csv)
+            app.save_benchmark_csv(
+                benchmark_type, results.response_list, dest=csv
+            )
         if table:
             print(helpers.string_table_result(results.response_list))
         if stats:

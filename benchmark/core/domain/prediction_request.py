@@ -11,9 +11,9 @@ __all__ = ["PredictionRequest"]
 class PredictionRequest:
     request_id: Id
     features: Features
-    start: float = None
-    end: float = None
-    prediction: Prediction = None
+    start: float | None = None
+    end: float | None = None
+    prediction: Prediction | None = None
 
     def todict(self) -> Dict[str, Any]:
         return dataclasses.asdict(self)

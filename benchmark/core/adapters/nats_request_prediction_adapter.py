@@ -12,9 +12,8 @@ from benchmark.core.adapters.helpers import (
     NatsSubscriber,
     NatsConnection,
 )
-
 from benchmark.core.ports import RequestPredictionPort
-from benchmark.core.types import Id
+from benchmark.core.types import Id, MessagingConfig
 
 
 __all__ = [
@@ -31,24 +30,16 @@ class NatsMessagingAdapter(RequestPredictionPort):
         self.__responses = FutureResponses()
 
     @staticmethod
-    def create(
-        nats_server: str,
-        prediction_request_channel: str,
-        prediction_response_channel: str,
-    ) -> NatsMessagingAdapter:
-
+    def create(config: MessagingConfig) -> NatsMessagingAdapter:
+        nats_url = "{}:{}".format(config.host, config.port)
         return NatsMessagingAdapter(
-            NatsPublisher(
-                NatsConnection(nats_server), prediction_request_channel
-            ),
-            NatsSubscriber(
-                NatsConnection(nats_server), prediction_response_channel
-            ),
+            NatsPublisher(NatsConnection(nats_url), config.request_channel),
+            NatsSubscriber(NatsConnection(nats_url), config.request_channel),
         )
 
     async def get_prediction(
         self, request: PredictionRequest
-    ) -> PredictionRequest:
+    ) -> Dict[str, Any]:
         return await self.__publish(request)
 
     async def __publish(self, prediction_request: PredictionRequest):

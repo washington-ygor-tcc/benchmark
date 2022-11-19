@@ -1,10 +1,23 @@
-MSG:
-  host: "nats://localhost"
-  port: 4222
-  request_channel: "prediction_request_channel"
-  response_channel: "prediction_response_channel"
+local:
+  MSG:
+    host: "nats://localhost"
+    port: 4222
+    request_channel: "prediction_request_channel"
+    response_channel: "prediction_response_channel"
 
-API:
-  host: "http://localhost"
-  port: 8000
-  prediction_route: "/predict"
+  API:
+    host: "http://localhost"
+    port: 8000
+    prediction_route: "/predict"
+
+docker:
+  MSG:
+    host: http://broker
+    port: 4222
+    request_channel: "prediction_request_channel"
+    response_channel: "prediction_response_channel"
+
+  API:
+    host: http://api
+    port: 8000
+    prediction_route: "/predict"
