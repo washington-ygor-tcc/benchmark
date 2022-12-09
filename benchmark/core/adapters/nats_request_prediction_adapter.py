@@ -22,9 +22,7 @@ __all__ = [
 
 
 class NatsMessagingAdapter(RequestPredictionPort):
-    def __init__(
-        self, publisher: NatsPublisher, subscriber: NatsSubscriber
-    ) -> None:
+    def __init__(self, publisher: NatsPublisher, subscriber: NatsSubscriber) -> None:
         self.__publisher = publisher
         self.__subscriber = subscriber
         self.__responses = FutureResponses()
@@ -34,21 +32,17 @@ class NatsMessagingAdapter(RequestPredictionPort):
         nats_url = "{}:{}".format(config.host, config.port)
         return NatsMessagingAdapter(
             NatsPublisher(NatsConnection(nats_url), config.request_channel),
-            NatsSubscriber(NatsConnection(nats_url), config.request_channel),
+            NatsSubscriber(NatsConnection(nats_url), config.response_channel),
         )
 
-    async def get_prediction(
-        self, request: PredictionRequest
-    ) -> Dict[str, Any]:
+    async def get_prediction(self, request: PredictionRequest) -> Dict[str, Any]:
         return await self.__publish(request)
 
     async def __publish(self, prediction_request: PredictionRequest):
         async with self.__subscriber.start_context(
             self.__handler, self.__responses.is_empty
         ):
-            with self.__with_response(
-                prediction_request.request_id
-            ) as future_response:
+            with self.__with_response(prediction_request.request_id) as future_response:
                 await self.__publisher.publish(prediction_request)
                 response = await future_response
                 return response.get("prediction")
